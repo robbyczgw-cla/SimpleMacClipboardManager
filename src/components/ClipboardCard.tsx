@@ -164,19 +164,20 @@ export default function ClipboardCard({
         {renderContent()}
       </div>
 
-      {/* Footer */}
-      <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
+      {/* Footer - with backdrop for readability on any content */}
+      <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center justify-between
+                      bg-gradient-to-t from-black/40 to-transparent rounded-b-2xl">
         <div className="flex items-center gap-1.5">
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getTypeBadgeClass(item.type)} text-white`}>
             {getTypeIcon(item.type)} {item.type}
           </span>
           {item.metadata.sourceApp && (
-            <span className="text-[10px] text-[var(--text-primary)] opacity-70 truncate max-w-[60px]" title={item.metadata.sourceApp}>
+            <span className="text-[10px] text-white/90 truncate max-w-[60px]" title={item.metadata.sourceApp}>
               {item.metadata.sourceApp}
             </span>
           )}
         </div>
-        <span className="text-[10px] text-[var(--text-primary)] opacity-60">
+        <span className="text-[10px] text-white/80">
           {formatTimeAgo(item.createdAt)}
         </span>
       </div>
