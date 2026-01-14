@@ -111,7 +111,7 @@ export default function ClipboardPanel({
             <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">⌘1-9</kbd> Quick paste</span>
             <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">esc</kbd> Close</span>
           </div>
-          <span>⌘⇧V to toggle</span>
+          <span>⌥Space to toggle</span>
         </div>
       </div>
     </div>

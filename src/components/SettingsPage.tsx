@@ -179,6 +179,7 @@ export default function SettingsPage() {
               onChange={e => handleChange('hotkey', e.target.value)}
               className="bg-white/10 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
             >
+              <option value="Option+Space">⌥Space (Default)</option>
               <option value="CommandOrControl+Shift+V">⌘⇧V</option>
               <option value="CommandOrControl+Shift+C">⌘⇧C</option>
               <option value="CommandOrControl+Shift+H">⌘⇧H</option>
@@ -186,7 +187,6 @@ export default function SettingsPage() {
               <option value="CommandOrControl+Option+C">⌘⌥C</option>
               <option value="CommandOrControl+Option+H">⌘⌥H</option>
               <option value="CommandOrControl+Option+P">⌘⌥P</option>
-              <option value="Option+Space">⌥Space</option>
             </select>
           </div>
           <p className="text-xs text-white/40 mt-2">

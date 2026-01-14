@@ -41,7 +41,7 @@ const defaultSettings: Settings = {
   launchAtLogin: false,
   clearOnQuit: false,
   showInDock: false,
-  hotkey: 'CommandOrControl+Shift+V',
+  hotkey: 'Option+Space',
   playSoundOnCopy: false,
   ignoreDuplicates: true,
   ignorePasswordManagers: true
@@ -112,17 +112,32 @@ function createWindow() {
 }
 
 function createTray() {
-  const iconPath = join(__dirname, '../assets/trayTemplate.png')
-  console.log('Loading tray icon from:', iconPath)
+  // Try multiple paths for the tray icon
+  const possiblePaths = [
+    join(__dirname, '../assets/trayTemplate.png'),  // Dev mode
+    join(process.resourcesPath, 'assets/trayTemplate.png'),  // Production (extraResources)
+    join(__dirname, 'assets/trayTemplate.png'),  // Alternative
+  ]
 
-  const icon = nativeImage.createFromPath(iconPath)
+  let icon = nativeImage.createEmpty()
+  for (const iconPath of possiblePaths) {
+    console.log('Trying tray icon path:', iconPath)
+    const testIcon = nativeImage.createFromPath(iconPath)
+    if (!testIcon.isEmpty()) {
+      icon = testIcon
+      console.log('Loaded tray icon from:', iconPath)
+      break
+    }
+  }
+
   icon.setTemplateImage(true)
 
   if (icon.isEmpty()) {
-    console.error('Failed to load tray icon, using fallback')
+    console.error('Failed to load tray icon from any path, using fallback')
     const fallback = nativeImage.createFromDataURL(
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAKElEQVQ4T2NkYGD4z0ABYBw1gGE0DBhGwwBkGDCMpgOG0XQAMiwAADfgAhFk8e4kAAAAAElFTkSuQmCC'
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMklEQVQ4T2NkIBMwkqmegXKDGRhggOL/DAwMjMRoHjUAl7cHiw8YRsMRNkcPltBgoCYHAHCbBBHpOpp5AAAAAElFTkSuQmCC'
     )
+    fallback.setTemplateImage(true)
     tray = new Tray(fallback)
   } else {
     tray = new Tray(icon)

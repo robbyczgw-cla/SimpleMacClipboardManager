@@ -13,7 +13,7 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 
 ## Features
 
-- **Instant Access** - Press `⌘⇧V` to open clipboard history
+- **Instant Access** - Press `⌥Space` to open clipboard history
 - **Visual Previews** - See text, links, colors, and file paths at a glance
 - **Smart Detection** - Automatically categorizes content types
 - **Fast Search** - Type to filter through your clipboard history
@@ -53,7 +53,7 @@ npm run build
 
 | Shortcut | Action |
 |----------|--------|
-| `⌘⇧V` | Toggle clipboard panel |
+| `⌥Space` | Toggle clipboard panel |
 | `←` `→` | Navigate between items |
 | `Enter` | Paste selected item |
 | `⌘1-9` | Quick paste items 1-9 |
