@@ -17,6 +17,7 @@ interface ClipboardPanelProps {
   onPaste: (item: ClipboardItem) => void
   onDelete: (id: string) => void
   onTogglePin: (id: string) => void
+  onPreview: (item: ClipboardItem) => void
   filterType: FilterType
   onFilterChange: (type: FilterType) => void
   panelPosition: PanelPosition
@@ -37,6 +38,7 @@ export default function ClipboardPanel({
   onPaste,
   onDelete,
   onTogglePin,
+  onPreview,
   filterType,
   onFilterChange,
   panelPosition
@@ -105,11 +107,12 @@ export default function ClipboardPanel({
           onDelete={() => onDelete(item.id)}
           onCopy={() => onPaste(item)}
           onTogglePin={() => onTogglePin(item.id)}
+          onPreview={() => onPreview(item)}
           isVertical={isVertical}
         />
       </div>
     )
-  }, [items, selectedIndex, selectedIds, onSelect, onToggleSelect, onPaste, onDelete, onTogglePin, isVertical])
+  }, [items, selectedIndex, selectedIds, onSelect, onToggleSelect, onPaste, onDelete, onTogglePin, onPreview, isVertical])
 
   const containerSize = getContainerSize()
 
@@ -181,6 +184,7 @@ export default function ClipboardPanel({
                 <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">⌘C</kbd> Copy</span>
                 <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">⇧↵</kbd> Plain</span>
                 <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">Space</kbd> Preview</span>
+                <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">O</kbd> Open URL</span>
                 {selectedIds.size > 0 && (
                   <span className="text-green-400">
                     <kbd className="px-1.5 py-0.5 bg-green-500/20 rounded text-[11px]">⌘M</kbd> Merge {selectedIds.size}

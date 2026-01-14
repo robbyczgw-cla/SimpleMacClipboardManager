@@ -200,6 +200,14 @@ function App() {
           }
         }
         break
+      // O = Open link in browser
+      case 'o':
+        if (filteredHistory[selectedIndex]?.type === 'link') {
+          e.preventDefault()
+          window.open(filteredHistory[selectedIndex].content, '_blank')
+          window.electronAPI.hideWindow()
+        }
+        break
     }
   }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleCopyOnly, handleDelete, previewItem, isVertical, pasteDirectly, selectedIds, handleMergePaste, handleToggleSelect])
 
@@ -232,6 +240,7 @@ function App() {
         onPaste={pasteDirectly ? handlePaste : handleCopyOnly}
         onDelete={handleDelete}
         onTogglePin={handleTogglePin}
+        onPreview={setPreviewItem}
         filterType={filterType}
         onFilterChange={setFilterType}
         panelPosition={panelPosition}

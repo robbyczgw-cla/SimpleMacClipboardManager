@@ -9,6 +9,7 @@ interface ClipboardCardProps {
   onDelete: () => void
   onCopy: () => void
   onTogglePin: () => void
+  onPreview?: () => void
   isVertical?: boolean
 }
 
@@ -52,6 +53,7 @@ export default function ClipboardCard({
   onDelete,
   onCopy,
   onTogglePin,
+  onPreview,
   isVertical = false
 }: ClipboardCardProps) {
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -76,12 +78,24 @@ export default function ClipboardCard({
     switch (item.type) {
       case 'image':
         return (
-          <div className="w-full h-24 flex items-center justify-center overflow-hidden rounded">
+          <div className="w-full h-20 flex items-center justify-center overflow-hidden rounded relative">
             <img
               src={item.thumbnail || item.content}
               alt="Clipboard image"
               className="max-w-full max-h-full object-contain"
             />
+            {/* Preview button for images */}
+            {onPreview && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onPreview()
+                }}
+                className="absolute bottom-1 right-1 px-2 py-1 text-[10px] bg-black/60 hover:bg-black/80 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                Preview
+              </button>
+            )}
           </div>
         )
 
@@ -117,6 +131,16 @@ export default function ClipboardCard({
             <div className="text-[var(--text-secondary)] text-xs truncate">
               {new URL(item.content).hostname}
             </div>
+            {/* Open in browser button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                window.open(item.content, '_blank')
+              }}
+              className="mt-1 px-2 py-1 text-[10px] bg-blue-500/80 hover:bg-blue-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              Open in Browser
+            </button>
           </div>
         )
 

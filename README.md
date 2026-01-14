@@ -92,6 +92,7 @@ npm run release
 | `⌘1-9` | Quick paste items 1-9 |
 | `⌘A` | Add current item to multi-selection |
 | `⌘M` | Merge paste all selected items |
+| `O` | Open selected URL in browser |
 | `Esc` | Close panel / preview |
 | `⌘⌫` | Delete selected item |
 | Type | Search clipboard history |

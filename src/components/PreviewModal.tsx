@@ -139,6 +139,42 @@ export default function PreviewModal({ item, onClose }: PreviewModalProps) {
               <p className="text-sm text-[var(--text-secondary)] mt-2">
                 {new URL(item.content).hostname}
               </p>
+              {/* Smart Actions for links */}
+              <div className="mt-4 pt-4 border-t border-[var(--border-color)]">
+                <p className="text-xs text-[var(--text-secondary)] mb-2">Actions:</p>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => {
+                      window.open(item.content, '_blank')
+                      onClose()
+                    }}
+                    className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+                  >
+                    Open in Browser
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(item.content)
+                      onClose()
+                    }}
+                    className="px-3 py-1.5 text-xs bg-white/10 hover:bg-white/20 rounded transition-colors"
+                  >
+                    Copy URL
+                  </button>
+                  <button
+                    onClick={() => {
+                      try {
+                        const url = new URL(item.content)
+                        navigator.clipboard.writeText(url.hostname)
+                        onClose()
+                      } catch {}
+                    }}
+                    className="px-3 py-1.5 text-xs bg-white/10 hover:bg-white/20 rounded transition-colors"
+                  >
+                    Copy Domain
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <div>
