@@ -40,12 +40,23 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 
 ## Installation
 
-### From Source
+### Download (Recommended)
+
+1. Download the latest `.zip` from [GitHub Releases](../../releases)
+2. Unzip and drag `SimpleMacClipboardManager.app` to `/Applications`
+3. **First launch** (required for unsigned apps):
+   - Right-click the app → **Open** → **Open**
+   - Or run in Terminal: `xattr -cr /Applications/SimpleMacClipboardManager.app`
+4. Grant **Accessibility** permission when prompted (required for global hotkey)
+
+> **Note**: This app is self-signed (not notarized with Apple). macOS will warn you on first launch - this is normal for open-source apps distributed outside the App Store.
+
+### Build from Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/robbyczgw-cla/SimpleMacClipboardManager.git
-cd SimpleMacClipboardManager
+git clone https://github.com/YOUR_USERNAME/pastealt.git
+cd pastealt
 
 # Install dependencies
 npm install
@@ -55,9 +66,10 @@ npm run dev
 
 # Build for production (creates app in /release folder)
 npm run build
-```
 
-> **Note**: The built app is unsigned. On first launch, right-click the app and select "Open", or go to System Preferences → Security & Privacy to allow it.
+# Build release with self-signing and zip
+npm run release
+```
 
 ## Usage
 

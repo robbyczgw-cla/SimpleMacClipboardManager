@@ -1,12 +1,15 @@
 {
   "name": "simple-mac-clipboard-manager",
-  "version": "1.0.0",
+  "version": "0.7.0",
   "type": "module",
   "description": "A lightweight clipboard manager for macOS",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
+    "release": "npm run build && npm run sign && npm run zip",
+    "sign": "codesign --force --deep --sign - 'release/mac-arm64/SimpleMacClipboardManager.app'",
+    "zip": "cd release/mac-arm64 && zip -r ../SimpleMacClipboardManager-$(node -p \"require('../../package.json').version\")-arm64.zip SimpleMacClipboardManager.app",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"electron .\"",
     "typecheck": "tsc --noEmit"
