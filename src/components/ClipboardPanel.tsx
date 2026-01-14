@@ -155,13 +155,13 @@ export default function ClipboardPanel({
         </div>
 
         {/* Footer hint */}
-        <div className={`border-t border-[var(--border-color)] text-xs text-[var(--text-tertiary)] ${
+        <div className={`border-t border-[var(--border-color)] text-xs text-[var(--text-secondary)] ${
           isVertical ? 'px-3 py-2' : 'px-5 py-3 flex items-center justify-between'
         }`}>
           {isVertical ? (
             <div className="flex flex-col gap-1 text-center">
               <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">↵</kbd> Paste</span>
-              <span className="opacity-70">⌥Space toggle</span>
+              <span className="opacity-80">⌥Space toggle</span>
             </div>
           ) : (
             <>
@@ -171,7 +171,7 @@ export default function ClipboardPanel({
                 <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">⇧↵</kbd> Plain</span>
                 <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">Space</kbd> Preview</span>
               </div>
-              <span className="opacity-70">⌥Space to toggle</span>
+              <span className="opacity-80">⌥Space to toggle</span>
             </>
           )}
         </div>
