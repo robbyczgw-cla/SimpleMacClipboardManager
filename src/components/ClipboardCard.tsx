@@ -167,16 +167,16 @@ export default function ClipboardCard({
       {/* Footer */}
       <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <span className={`text-[10px] px-1.5 py-0.5 rounded ${getTypeBadgeClass(item.type)} text-white/80`}>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getTypeBadgeClass(item.type)} text-white`}>
             {getTypeIcon(item.type)} {item.type}
           </span>
           {item.metadata.sourceApp && (
-            <span className="text-[9px] text-[var(--text-secondary)] truncate max-w-[60px]" title={item.metadata.sourceApp}>
+            <span className="text-[10px] text-[var(--text-primary)] opacity-70 truncate max-w-[60px]" title={item.metadata.sourceApp}>
               {item.metadata.sourceApp}
             </span>
           )}
         </div>
-        <span className="text-[10px] text-[var(--text-secondary)]">
+        <span className="text-[10px] text-[var(--text-primary)] opacity-60">
           {formatTimeAgo(item.createdAt)}
         </span>
       </div>
