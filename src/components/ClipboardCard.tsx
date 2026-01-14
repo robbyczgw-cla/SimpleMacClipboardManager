@@ -7,6 +7,7 @@ interface ClipboardCardProps {
   onDoubleClick: () => void
   onDelete: () => void
   onCopy: () => void
+  onTogglePin: () => void
 }
 
 function formatTimeAgo(timestamp: number): string {
@@ -46,7 +47,8 @@ export default function ClipboardCard({
   onClick,
   onDoubleClick,
   onDelete,
-  onCopy
+  onCopy,
+  onTogglePin
 }: ClipboardCardProps) {
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -124,6 +126,20 @@ export default function ClipboardCard({
         }
       `}
     >
+      {/* Pin button */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onTogglePin()
+        }}
+        className={`absolute top-2 left-2 w-5 h-5 rounded-full
+                   flex items-center justify-center transition-opacity
+                   text-xs ${item.pinned ? 'text-yellow-400 opacity-100' : 'text-white/40 opacity-0 hover:opacity-100'}`}
+        title={item.pinned ? 'Unpin' : 'Pin'}
+      >
+        {item.pinned ? '★' : '☆'}
+      </button>
+
       {/* Delete button */}
       <button
         onClick={(e) => {
@@ -145,9 +161,16 @@ export default function ClipboardCard({
 
       {/* Footer */}
       <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
-        <span className={`text-[10px] px-1.5 py-0.5 rounded ${getTypeBadgeClass(item.type)} text-white/80`}>
-          {getTypeIcon(item.type)} {item.type}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[10px] px-1.5 py-0.5 rounded ${getTypeBadgeClass(item.type)} text-white/80`}>
+            {getTypeIcon(item.type)} {item.type}
+          </span>
+          {item.metadata.sourceApp && (
+            <span className="text-[9px] text-[var(--text-secondary)] truncate max-w-[60px]" title={item.metadata.sourceApp}>
+              {item.metadata.sourceApp}
+            </span>
+          )}
+        </div>
         <span className="text-[10px] text-[var(--text-secondary)]">
           {formatTimeAgo(item.createdAt)}
         </span>

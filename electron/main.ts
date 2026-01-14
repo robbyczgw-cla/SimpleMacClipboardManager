@@ -1,6 +1,7 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, nativeImage, screen, Tray, Menu, systemPreferences, dialog } from 'electron'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { execSync } from 'child_process'
 import { v4 as uuidv4 } from 'uuid'
 import Store from 'electron-store'
 
@@ -15,9 +16,11 @@ interface ClipboardItem {
   metadata: {
     url?: string
     colorHex?: string
+    sourceApp?: string
   }
   createdAt: number
   searchText: string
+  pinned?: boolean
 }
 
 interface Settings {
@@ -215,6 +218,27 @@ function detectContentType(text: string): ClipboardItem['type'] {
   return 'text'
 }
 
+// Password manager app identifiers
+const PASSWORD_MANAGER_APPS = [
+  '1password', 'onepassword', 'bitwarden', 'lastpass', 'dashlane',
+  'keeper', 'keychain', 'enpass', 'roboform', 'nordpass', 'proton pass'
+]
+
+function getFrontmostApp(): string {
+  try {
+    const script = 'tell application "System Events" to get name of first application process whose frontmost is true'
+    const result = execSync(`osascript -e '${script}'`, { encoding: 'utf8', timeout: 500 })
+    return result.trim().toLowerCase()
+  } catch {
+    return ''
+  }
+}
+
+function isPasswordManagerActive(): boolean {
+  const frontApp = getFrontmostApp()
+  return PASSWORD_MANAGER_APPS.some(pm => frontApp.includes(pm))
+}
+
 function startClipboardPolling() {
   const settings = getSettings()
 
@@ -233,8 +257,23 @@ function pollClipboard() {
     const text = clipboard.readText()
 
     if (text && text !== lastClipboardContent) {
+      // Check if we should ignore password managers
+      if (settings.ignorePasswordManagers && isPasswordManagerActive()) {
+        console.log('Ignored clipboard from password manager')
+        lastClipboardContent = text // Still update to avoid re-checking
+        return
+      }
+
+      // Check for duplicates (consecutive identical copies)
+      const history = store.get('history')
+      if (settings.ignoreDuplicates && history.length > 0 && history[0].content === text) {
+        lastClipboardContent = text
+        return
+      }
+
       lastClipboardContent = text
       const type = detectContentType(text)
+      const sourceApp = getFrontmostApp()
 
       const item: ClipboardItem = {
         id: uuidv4(),
@@ -242,13 +281,14 @@ function pollClipboard() {
         content: text,
         metadata: {
           url: type === 'link' ? text : undefined,
-          colorHex: type === 'color' ? text : undefined
+          colorHex: type === 'color' ? text : undefined,
+          sourceApp: sourceApp || undefined
         },
         createdAt: Date.now(),
-        searchText: text.toLowerCase()
+        searchText: text.toLowerCase(),
+        pinned: false
       }
 
-      const history = store.get('history')
       const filtered = history.filter(h => h.content !== text)
       const updated = [item, ...filtered].slice(0, settings.historyLimit)
       store.set('history', updated)
@@ -333,6 +373,20 @@ app.whenReady().then(() => {
 
   ipcMain.handle('delete-item', (_, id: string) => {
     const history = store.get('history').filter(h => h.id !== id)
+    store.set('history', history)
+    mainWindow?.webContents.send('history-updated', history)
+  })
+
+  ipcMain.handle('toggle-pin', (_, id: string) => {
+    const history = store.get('history').map(h =>
+      h.id === id ? { ...h, pinned: !h.pinned } : h
+    )
+    // Sort: pinned items first, then by createdAt
+    history.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1
+      if (!a.pinned && b.pinned) return 1
+      return b.createdAt - a.createdAt
+    })
     store.set('history', history)
     mainWindow?.webContents.send('history-updated', history)
   })

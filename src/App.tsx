@@ -3,11 +3,14 @@ import { ClipboardItem } from './types'
 import ClipboardPanel from './components/ClipboardPanel'
 import SettingsPage from './components/SettingsPage'
 
+type FilterType = 'all' | ClipboardItem['type']
+
 function App() {
   const [history, setHistory] = useState<ClipboardItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isVisible, setIsVisible] = useState(false)
+  const [filterType, setFilterType] = useState<FilterType>('all')
 
   // Check if we're in settings mode (hash routing)
   const isSettingsPage = window.location.hash === '#settings'
@@ -36,11 +39,13 @@ function App() {
     }
   }, [isSettingsPage])
 
-  const filteredHistory = searchQuery
-    ? history.filter(item =>
-        item.searchText.includes(searchQuery.toLowerCase())
-      )
-    : history
+  const filteredHistory = history.filter(item => {
+    // Filter by type
+    if (filterType !== 'all' && item.type !== filterType) return false
+    // Filter by search query
+    if (searchQuery && !item.searchText.includes(searchQuery.toLowerCase())) return false
+    return true
+  })
 
   const handlePaste = useCallback((item: ClipboardItem) => {
     window.electronAPI.pasteItem(item)
@@ -48,6 +53,10 @@ function App() {
 
   const handleDelete = useCallback((id: string) => {
     window.electronAPI.deleteItem(id)
+  }, [])
+
+  const handleTogglePin = useCallback((id: string) => {
+    window.electronAPI.togglePin(id)
   }, [])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -80,6 +89,17 @@ function App() {
           }
         }
         break
+      // Quick paste shortcuts: Cmd+1 through Cmd+9
+      case '1': case '2': case '3': case '4': case '5':
+      case '6': case '7': case '8': case '9':
+        if (e.metaKey || e.ctrlKey) {
+          e.preventDefault()
+          const index = parseInt(e.key) - 1
+          if (filteredHistory[index]) {
+            handlePaste(filteredHistory[index])
+          }
+        }
+        break
     }
   }, [isVisible, selectedIndex, filteredHistory, handlePaste, handleDelete])
 
@@ -108,6 +128,9 @@ function App() {
       onSelect={setSelectedIndex}
       onPaste={handlePaste}
       onDelete={handleDelete}
+      onTogglePin={handleTogglePin}
+      filterType={filterType}
+      onFilterChange={setFilterType}
     />
   )
 }

@@ -8,9 +8,11 @@ export interface ClipboardItem {
     url?: string
     fileName?: string
     colorHex?: string
+    sourceApp?: string
   }
   createdAt: number
   searchText: string
+  pinned?: boolean
 }
 
 export interface Settings {
@@ -29,6 +31,7 @@ export interface ElectronAPI {
   getHistory: () => Promise<ClipboardItem[]>
   pasteItem: (item: ClipboardItem) => Promise<void>
   deleteItem: (id: string) => Promise<void>
+  togglePin: (id: string) => Promise<void>
   clearHistory: () => Promise<void>
   hideWindow: () => Promise<void>
   getSettings: () => Promise<Settings>

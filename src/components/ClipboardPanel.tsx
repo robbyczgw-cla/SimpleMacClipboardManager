@@ -3,6 +3,8 @@ import { ClipboardItem } from '../types'
 import ClipboardCard from './ClipboardCard'
 import SearchBar from './SearchBar'
 
+type FilterType = 'all' | ClipboardItem['type']
+
 interface ClipboardPanelProps {
   items: ClipboardItem[]
   selectedIndex: number
@@ -11,6 +13,9 @@ interface ClipboardPanelProps {
   onSelect: (index: number) => void
   onPaste: (item: ClipboardItem) => void
   onDelete: (id: string) => void
+  onTogglePin: (id: string) => void
+  filterType: FilterType
+  onFilterChange: (type: FilterType) => void
 }
 
 export default function ClipboardPanel({
@@ -20,7 +25,10 @@ export default function ClipboardPanel({
   onSearchChange,
   onSelect,
   onPaste,
-  onDelete
+  onDelete,
+  onTogglePin,
+  filterType,
+  onFilterChange
 }: ClipboardPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const selectedCardRef = useRef<HTMLDivElement>(null)
@@ -59,6 +67,8 @@ export default function ClipboardPanel({
             value={searchQuery}
             onChange={onSearchChange}
             itemCount={items.length}
+            filterType={filterType}
+            onFilterChange={onFilterChange}
           />
         </div>
 
@@ -86,6 +96,7 @@ export default function ClipboardPanel({
                   onDoubleClick={() => onPaste(item)}
                   onDelete={() => onDelete(item.id)}
                   onCopy={() => onPaste(item)}
+                  onTogglePin={() => onTogglePin(item.id)}
                 />
               </div>
             ))
@@ -96,7 +107,8 @@ export default function ClipboardPanel({
         <div className="px-6 py-2 border-t border-[var(--border-color)] flex items-center justify-between text-xs text-[var(--text-secondary)]">
           <div className="flex gap-4">
             <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">←</kbd> <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">→</kbd> Navigate</span>
-            <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">↵</kbd> or <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">Right-click</kbd> Paste</span>
+            <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">↵</kbd> Paste</span>
+            <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">⌘1-9</kbd> Quick paste</span>
             <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">esc</kbd> Close</span>
           </div>
           <span>⌘⇧V to toggle</span>

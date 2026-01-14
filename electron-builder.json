@@ -10,11 +10,9 @@
     "dist-electron/**/*"
   ],
   "mac": {
-    "target": ["dmg", "zip"],
+    "target": ["dir"],
     "category": "public.app-category.productivity",
-    "icon": "build/icon.icns",
-    "hardenedRuntime": true,
-    "gatekeeperAssess": false,
+    "identity": null,
     "entitlements": "build/entitlements.mac.plist",
     "entitlementsInherit": "build/entitlements.mac.plist"
   },

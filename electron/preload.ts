@@ -8,15 +8,18 @@ interface ClipboardItem {
   metadata: {
     url?: string
     colorHex?: string
+    sourceApp?: string
   }
   createdAt: number
   searchText: string
+  pinned?: boolean
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getHistory: (): Promise<ClipboardItem[]> => ipcRenderer.invoke('get-history'),
   pasteItem: (item: ClipboardItem): Promise<void> => ipcRenderer.invoke('paste-item', item),
   deleteItem: (id: string): Promise<void> => ipcRenderer.invoke('delete-item', id),
+  togglePin: (id: string): Promise<void> => ipcRenderer.invoke('toggle-pin', id),
   clearHistory: (): Promise<void> => ipcRenderer.invoke('clear-history'),
   hideWindow: (): Promise<void> => ipcRenderer.invoke('hide-window'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
