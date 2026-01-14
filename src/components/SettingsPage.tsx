@@ -7,6 +7,9 @@ interface Settings {
   clearOnQuit: boolean
   showInDock: boolean
   hotkey: string
+  playSoundOnCopy: boolean
+  ignoreDuplicates: boolean
+  ignorePasswordManagers: boolean
 }
 
 const defaultSettings: Settings = {
@@ -15,7 +18,10 @@ const defaultSettings: Settings = {
   launchAtLogin: false,
   clearOnQuit: false,
   showInDock: false,
-  hotkey: 'CommandOrControl+Shift+V'
+  hotkey: 'CommandOrControl+Shift+V',
+  playSoundOnCopy: false,
+  ignoreDuplicates: true,
+  ignorePasswordManagers: true
 }
 
 export default function SettingsPage() {
@@ -43,7 +49,7 @@ export default function SettingsPage() {
 
       <h1 className="text-xl font-semibold mb-6">Settings</h1>
 
-      <div className="space-y-6">
+      <div className="space-y-6 max-h-[320px] overflow-y-auto pr-2">
         {/* History Section */}
         <section className="bg-white/5 rounded-lg p-4">
           <h3 className="text-sm font-medium text-white/80 mb-4">History</h3>
@@ -64,8 +70,20 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <div>
+                <label className="text-sm text-white/70">Ignore duplicates</label>
+                <p className="text-xs text-white/40">Don't save consecutive identical copies</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.ignoreDuplicates}
+                onChange={e => handleChange('ignoreDuplicates', e.target.checked)}
+                className="w-4 h-4 rounded accent-blue-500"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
                 <label className="text-sm text-white/70">Clear history on quit</label>
-                <p className="text-xs text-white/40">Erase all clipboard data when closing</p>
+                <p className="text-xs text-white/40">Erase all data when closing</p>
               </div>
               <input
                 type="checkbox"
@@ -96,7 +114,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <label className="text-sm text-white/70">Launch at login</label>
-                <p className="text-xs text-white/40">Start MacClipManager when you log in</p>
+                <p className="text-xs text-white/40">Start automatically when you log in</p>
               </div>
               <input
                 type="checkbox"
@@ -117,6 +135,37 @@ export default function SettingsPage() {
                 className="w-4 h-4 rounded accent-blue-500"
               />
             </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-white/70">Play sound on copy</label>
+                <p className="text-xs text-white/40">Audio feedback when saving to history</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.playSoundOnCopy}
+                onChange={e => handleChange('playSoundOnCopy', e.target.checked)}
+                className="w-4 h-4 rounded accent-blue-500"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Privacy Section */}
+        <section className="bg-white/5 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-white/80 mb-4">Privacy</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-white/70">Ignore password managers</label>
+                <p className="text-xs text-white/40">Don't capture from 1Password, Bitwarden, etc.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.ignorePasswordManagers}
+                onChange={e => handleChange('ignorePasswordManagers', e.target.checked)}
+                className="w-4 h-4 rounded accent-blue-500"
+              />
+            </div>
           </div>
         </section>
 
@@ -125,12 +174,23 @@ export default function SettingsPage() {
           <h3 className="text-sm font-medium text-white/80 mb-4">Keyboard</h3>
           <div className="flex items-center justify-between">
             <label className="text-sm text-white/70">Global hotkey</label>
-            <div className="text-sm text-white/50 bg-white/5 px-3 py-1.5 rounded border border-white/10">
-              ⌘⇧V
-            </div>
+            <select
+              value={settings.hotkey}
+              onChange={e => handleChange('hotkey', e.target.value)}
+              className="bg-white/10 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+            >
+              <option value="CommandOrControl+Shift+V">⌘⇧V</option>
+              <option value="CommandOrControl+Shift+C">⌘⇧C</option>
+              <option value="CommandOrControl+Shift+H">⌘⇧H</option>
+              <option value="CommandOrControl+Option+V">⌘⌥V</option>
+              <option value="CommandOrControl+Option+C">⌘⌥C</option>
+              <option value="CommandOrControl+Option+H">⌘⌥H</option>
+              <option value="CommandOrControl+Option+P">⌘⌥P</option>
+              <option value="Option+Space">⌥Space</option>
+            </select>
           </div>
           <p className="text-xs text-white/40 mt-2">
-            Hotkey customization coming in a future update
+            Restart app after changing hotkey
           </p>
         </section>
       </div>

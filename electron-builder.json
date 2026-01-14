@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "com.pastealt.app",
-  "productName": "PasteAlt",
+  "appId": "com.simplemacclipboardmanager.app",
+  "productName": "SimpleMacClipboardManager",
   "directories": {
     "output": "release"
   },

@@ -1,8 +1,8 @@
 {
-  "name": "pastealt",
+  "name": "simple-mac-clipboard-manager",
   "version": "1.0.0",
   "type": "module",
-  "description": "A local clipboard manager with Paste-like UI",
+  "description": "A lightweight clipboard manager for macOS",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",

@@ -85,6 +85,7 @@ export default function ClipboardPanel({
                   onClick={() => onSelect(index)}
                   onDoubleClick={() => onPaste(item)}
                   onDelete={() => onDelete(item.id)}
+                  onCopy={() => onPaste(item)}
                 />
               </div>
             ))
@@ -95,7 +96,7 @@ export default function ClipboardPanel({
         <div className="px-6 py-2 border-t border-[var(--border-color)] flex items-center justify-between text-xs text-[var(--text-secondary)]">
           <div className="flex gap-4">
             <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">←</kbd> <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">→</kbd> Navigate</span>
-            <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">↵</kbd> Paste</span>
+            <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">↵</kbd> or <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">Right-click</kbd> Paste</span>
             <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">esc</kbd> Close</span>
           </div>
           <span>⌘⇧V to toggle</span>

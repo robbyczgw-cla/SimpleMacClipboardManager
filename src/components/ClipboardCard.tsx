@@ -6,6 +6,7 @@ interface ClipboardCardProps {
   onClick: () => void
   onDoubleClick: () => void
   onDelete: () => void
+  onCopy: () => void
 }
 
 function formatTimeAgo(timestamp: number): string {
@@ -44,8 +45,13 @@ export default function ClipboardCard({
   isSelected,
   onClick,
   onDoubleClick,
-  onDelete
+  onDelete,
+  onCopy
 }: ClipboardCardProps) {
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    onCopy()
+  }
   const renderContent = () => {
     switch (item.type) {
       case 'image':
@@ -107,6 +113,7 @@ export default function ClipboardCard({
     <div
       onClick={onClick}
       onDoubleClick={onDoubleClick}
+      onContextMenu={handleContextMenu}
       className={`
         card-animate relative flex-shrink-0 w-48 h-36 p-3 rounded-xl cursor-pointer
         transition-all duration-150 ease-out

@@ -1,6 +1,6 @@
-# MacClipManager
+# SimpleMacClipboardManager
 
-A free, local-only clipboard manager for macOS inspired by [Paste](https://pasteapp.io/). Built with Electron + React.
+A free, lightweight clipboard manager for macOS. Keep your clipboard history organized and accessible.
 
 ![macOS](https://img.shields.io/badge/macOS-000000?style=flat&logo=apple&logoColor=white)
 ![Electron](https://img.shields.io/badge/Electron-47848F?style=flat&logo=electron&logoColor=white)
@@ -11,24 +11,20 @@ A free, local-only clipboard manager for macOS inspired by [Paste](https://paste
 
 - **Instant Access** - Press `⌘⇧V` to open clipboard history
 - **Visual Previews** - See text, links, colors, and file paths at a glance
-- **Smart Detection** - Automatically categorizes content (text, URLs, colors, files)
+- **Smart Detection** - Automatically categorizes content types
 - **Fast Search** - Type to filter through your clipboard history
 - **Keyboard First** - Navigate with arrow keys, paste with Enter
 - **Local Only** - All data stays on your Mac, no cloud sync
 - **Lightweight** - Minimal resource usage, runs in menu bar
 
-## Screenshots
-
-<!-- Add screenshots here -->
-
 ## Installation
 
-### From Source (Recommended)
+### From Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/robbyczgw-cla/MacClipManager.git
-cd MacClipManager
+git clone https://github.com/robbyczgw-cla/SimpleMacClipboardManager.git
+cd SimpleMacClipboardManager
 
 # Install dependencies
 npm install
@@ -52,7 +48,6 @@ npm run build
 | `←` `→` | Navigate between items |
 | `Enter` | Paste selected item |
 | `Esc` | Close panel |
-| `⌘,` | Open settings |
 | `⌘⌫` | Delete selected item |
 | Type | Search clipboard history |
 
@@ -66,13 +61,29 @@ Click the clipboard icon in the menu bar to:
 
 ## Settings
 
-Access settings via menu bar or `⌘,`:
+Access settings via menu bar → Settings:
 
-- **History Limit** - Maximum items to store (100-2000)
-- **Polling Interval** - How often to check clipboard (250-1000ms)
-- **Launch at Login** - Start MacClipManager when you log in
-- **Clear on Quit** - Erase history when closing the app
-- **Show in Dock** - Display dock icon (hidden by default)
+### History
+- **Maximum items** - How many items to store (100-2000)
+- **Clear on quit** - Erase history when closing the app
+- **Ignore duplicate entries** - Don't save consecutive duplicates
+
+### Behavior
+- **Polling interval** - How often to check clipboard (250-1000ms)
+- **Launch at login** - Start automatically when you log in
+- **Show in Dock** - Display app icon in the Dock
+- **Play sound on copy** - Audio feedback when clipboard changes
+
+### Privacy
+- **Ignore password managers** - Don't capture from 1Password, Bitwarden, etc.
+- **Auto-clear sensitive data** - Remove passwords after a timeout
+
+## Privacy
+
+SimpleMacClipboardManager is completely local:
+- No data is sent to any server
+- No analytics or telemetry
+- All clipboard data is stored locally
 
 ## Tech Stack
 
@@ -82,55 +93,9 @@ Access settings via menu bar or `⌘,`:
 - **Styling**: Tailwind CSS
 - **Storage**: electron-store
 
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Type check
-npm run typecheck
-
-# Build for production
-npm run build
-```
-
-## Project Structure
-
-```
-├── electron/
-│   ├── main.ts       # Main process, tray, hotkeys
-│   └── preload.ts    # IPC bridge (CommonJS)
-├── src/
-│   ├── App.tsx       # Main React component
-│   ├── components/
-│   │   ├── ClipboardPanel.tsx
-│   │   ├── ClipboardCard.tsx
-│   │   ├── SearchBar.tsx
-│   │   └── SettingsModal.tsx
-│   └── types.ts
-├── assets/
-│   └── trayTemplate.png
-└── package.json
-```
-
-## Privacy
-
-MacClipManager is completely local:
-- No data is sent to any server
-- No analytics or telemetry
-- All clipboard data is stored locally in `~/Library/Application Support/pastealt`
-
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
-
-## Acknowledgments
-
-Inspired by [Paste](https://pasteapp.io/) and [Maccy](https://github.com/p0deje/Maccy).
 
 ---
 

@@ -20,6 +20,9 @@ export interface Settings {
   clearOnQuit: boolean
   showInDock: boolean
   hotkey: string
+  playSoundOnCopy: boolean
+  ignoreDuplicates: boolean
+  ignorePasswordManagers: boolean
 }
 
 export interface ElectronAPI {

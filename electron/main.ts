@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, nativeImage, screen, Tray, Menu } from 'electron'
+import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, nativeImage, screen, Tray, Menu, systemPreferences, dialog } from 'electron'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { v4 as uuidv4 } from 'uuid'
@@ -27,6 +27,9 @@ interface Settings {
   clearOnQuit: boolean
   showInDock: boolean
   hotkey: string
+  playSoundOnCopy: boolean
+  ignoreDuplicates: boolean
+  ignorePasswordManagers: boolean
 }
 
 const defaultSettings: Settings = {
@@ -35,7 +38,10 @@ const defaultSettings: Settings = {
   launchAtLogin: false,
   clearOnQuit: false,
   showInDock: false,
-  hotkey: 'CommandOrControl+Shift+V'
+  hotkey: 'CommandOrControl+Shift+V',
+  playSoundOnCopy: false,
+  ignoreDuplicates: true,
+  ignorePasswordManagers: true
 }
 
 const store = new Store<{ history: ClipboardItem[], settings: Settings }>({
@@ -118,7 +124,7 @@ function createTray() {
   } else {
     tray = new Tray(icon)
   }
-  tray.setToolTip('PasteAlt')
+  tray.setToolTip('SimpleMacClipboardManager')
 
   updateTrayMenu()
   tray.on('click', toggleWindow)
@@ -136,7 +142,7 @@ function updateTrayMenu() {
     { type: 'separator' },
     { label: 'Clear History', click: () => clearHistory() },
     { type: 'separator' },
-    { label: 'Quit PasteAlt', click: () => app.quit() }
+    { label: 'Quit', click: () => app.quit() }
   ])
 
   tray.setContextMenu(menu)
@@ -151,7 +157,7 @@ function openSettings() {
   settingsWindow = new BrowserWindow({
     width: 480,
     height: 420,
-    title: 'MacClipManager Settings',
+    title: 'Settings',
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -273,6 +279,28 @@ function applySettings(settings: Settings) {
 
 app.whenReady().then(() => {
   console.log('App ready, creating window and tray...')
+
+  // Check accessibility permissions (required for global hotkeys)
+  if (process.platform === 'darwin') {
+    const isTrusted = systemPreferences.isTrustedAccessibilityClient({ prompt: false })
+    console.log('Accessibility permission:', isTrusted ? 'granted' : 'not granted')
+
+    if (!isTrusted) {
+      // Prompt user for accessibility permission
+      const result = dialog.showMessageBoxSync({
+        type: 'info',
+        title: 'Accessibility Permission Required',
+        message: 'SimpleMacClipboardManager needs Accessibility permission to use global hotkeys.',
+        detail: 'Click "Open System Preferences" to grant permission, then restart the app.',
+        buttons: ['Open System Preferences', 'Later']
+      })
+
+      if (result === 0) {
+        // This will open System Preferences and prompt for permission
+        systemPreferences.isTrustedAccessibilityClient({ prompt: true })
+      }
+    }
+  }
 
   const settings = getSettings()
 
