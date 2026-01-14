@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.jpg" width="128" height="128" alt="SimpleMacClipboardManager Logo">
+</p>
+
 # SimpleMacClipboardManager
 
 A free, lightweight clipboard manager for macOS. Keep your clipboard history organized and accessible.
@@ -13,8 +17,13 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 - **Visual Previews** - See text, links, colors, and file paths at a glance
 - **Smart Detection** - Automatically categorizes content types
 - **Fast Search** - Type to filter through your clipboard history
+- **Filter by Type** - Quick filter buttons for text, links, colors, files
+- **Pin Favorites** - Star important items to keep them at the top
+- **Quick Paste** - `⌘1-9` to instantly paste items by position
+- **Source App Tracking** - See which app content was copied from
 - **Keyboard First** - Navigate with arrow keys, paste with Enter
 - **Local Only** - All data stays on your Mac, no cloud sync
+- **Privacy Focused** - Ignores password managers automatically
 - **Lightweight** - Minimal resource usage, runs in menu bar
 
 ## Installation
@@ -47,8 +56,10 @@ npm run build
 | `⌘⇧V` | Toggle clipboard panel |
 | `←` `→` | Navigate between items |
 | `Enter` | Paste selected item |
+| `⌘1-9` | Quick paste items 1-9 |
 | `Esc` | Close panel |
 | `⌘⌫` | Delete selected item |
+| Right-click | Paste item |
 | Type | Search clipboard history |
 
 ### Menu Bar
