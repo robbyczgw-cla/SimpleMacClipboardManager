@@ -119,9 +119,9 @@ export default function ClipboardCard({
       onDoubleClick={onDoubleClick}
       onContextMenu={handleContextMenu}
       className={`
-        card-animate relative flex-shrink-0 p-3 rounded-2xl cursor-pointer
-        transition-all duration-300 ease-out
-        border
+        relative flex-shrink-0 p-3 rounded-2xl cursor-pointer
+        transition-all duration-200 ease-out
+        border group
         ${isVertical ? 'w-full h-28' : 'w-52 h-44'}
         ${isSelected
           ? 'glass-card-selected border-blue-500/40 scale-[1.02]'
@@ -144,16 +144,17 @@ export default function ClipboardCard({
         {item.pinned ? '★' : '☆'}
       </button>
 
-      {/* Delete button */}
+      {/* Delete button - visible on hover or when selected */}
       <button
         onClick={(e) => {
           e.stopPropagation()
           onDelete()
         }}
-        className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white/10 hover:bg-red-500/50
-                   flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity
-                   text-xs text-white/60 hover:text-white"
-        style={{ opacity: isSelected ? 0.5 : undefined }}
+        className={`absolute top-2 right-2 w-6 h-6 rounded-full bg-black/30 hover:bg-red-500/80
+                   flex items-center justify-center transition-all
+                   text-sm text-white/70 hover:text-white
+                   ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+        title="Delete"
       >
         ×
       </button>
