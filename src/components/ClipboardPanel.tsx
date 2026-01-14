@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react'
 import { FixedSizeList as List } from 'react-window'
-import { ClipboardItem, PanelPosition } from '../types'
+import { ClipboardItem, PanelPosition, CardSize } from '../types'
 import ClipboardCard from './ClipboardCard'
 import SearchBar from './SearchBar'
 
@@ -21,11 +21,16 @@ interface ClipboardPanelProps {
   filterType: FilterType
   onFilterChange: (type: FilterType) => void
   panelPosition: PanelPosition
+  cardSize: CardSize
 }
 
-// Card dimensions
-const CARD_WIDTH = 208 + 12 // 52*4 = 208px width + 12px gap
-const VERTICAL_CARD_HEIGHT = 112 + 12 // Vertical mode card height + gap
+// Card dimensions based on size
+const CARD_SIZES = {
+  small: { width: 160, height: 140 },
+  medium: { width: 208, height: 176 },
+  large: { width: 280, height: 200 }
+}
+const GAP = 12
 
 export default function ClipboardPanel({
   items,
@@ -41,7 +46,8 @@ export default function ClipboardPanel({
   onPreview,
   filterType,
   onFilterChange,
-  panelPosition
+  panelPosition,
+  cardSize
 }: ClipboardPanelProps) {
   const listRef = useRef<List>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -109,6 +115,7 @@ export default function ClipboardPanel({
           onTogglePin={() => onTogglePin(item.id)}
           onPreview={() => onPreview(item)}
           isVertical={isVertical}
+          cardSize={cardSize}
         />
       </div>
     )
@@ -147,7 +154,7 @@ export default function ClipboardPanel({
               ref={listRef}
               height={containerSize.height - 140} // Account for search bar and footer
               itemCount={items.length}
-              itemSize={VERTICAL_CARD_HEIGHT}
+              itemSize={CARD_SIZES[cardSize].height + GAP}
               width="100%"
               className="scroll-container pt-2"
             >
@@ -156,9 +163,9 @@ export default function ClipboardPanel({
           ) : (
             <List
               ref={listRef}
-              height={190}
+              height={CARD_SIZES[cardSize].height + 14}
               itemCount={items.length}
-              itemSize={CARD_WIDTH}
+              itemSize={CARD_SIZES[cardSize].width + GAP}
               width={containerSize.width - 40} // Account for padding
               layout="horizontal"
               className="scroll-container"

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { getTranslations, languageNames, Language } from '../i18n/translations'
 
 type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
+type CardSize = 'small' | 'medium' | 'large'
 
 interface Settings {
   historyLimit: number
@@ -17,6 +18,7 @@ interface Settings {
   panelPosition: PanelPosition
   language: Language
   pasteDirectly: boolean
+  cardSize: CardSize
 }
 
 const DEFAULT_IGNORED_TYPES = [
@@ -43,7 +45,8 @@ const defaultSettings: Settings = {
   ignoredPasteboardTypes: DEFAULT_IGNORED_TYPES,
   panelPosition: 'bottom',
   language: 'en',
-  pasteDirectly: false
+  pasteDirectly: false,
+  cardSize: 'medium'
 }
 
 export default function SettingsPage() {
@@ -256,6 +259,21 @@ export default function SettingsPage() {
                 {(Object.keys(languageNames) as Language[]).map(lang => (
                   <option key={lang} value={lang}>{languageNames[lang]}</option>
                 ))}
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-white/70">Card Size</label>
+                <p className="text-xs text-white/40">Size of clipboard item cards</p>
+              </div>
+              <select
+                value={settings.cardSize || 'medium'}
+                onChange={e => handleChange('cardSize', e.target.value as CardSize)}
+                className="bg-white/10 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
               </select>
             </div>
           </div>

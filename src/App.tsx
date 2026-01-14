@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ClipboardItem, PanelPosition } from './types'
+import { ClipboardItem, PanelPosition, CardSize } from './types'
 import ClipboardPanel from './components/ClipboardPanel'
 import SettingsPage from './components/SettingsPage'
 import PreviewModal from './components/PreviewModal'
@@ -16,6 +16,7 @@ function App() {
   const [previewItem, setPreviewItem] = useState<ClipboardItem | null>(null)
   const [panelPosition, setPanelPosition] = useState<PanelPosition>('bottom')
   const [pasteDirectly, setPasteDirectly] = useState(false)
+  const [cardSize, setCardSize] = useState<CardSize>('medium')
 
   // Check if we're in settings mode (hash routing)
   const isSettingsPage = window.location.hash === '#settings'
@@ -28,6 +29,7 @@ function App() {
     window.electronAPI.getSettings().then(settings => {
       setPanelPosition(settings.panelPosition || 'bottom')
       setPasteDirectly(settings.pasteDirectly ?? false)
+      setCardSize(settings.cardSize || 'medium')
     })
 
     // Listen for updates
@@ -41,6 +43,7 @@ function App() {
       window.electronAPI.getSettings().then(settings => {
         setPanelPosition(settings.panelPosition || 'bottom')
         setPasteDirectly(settings.pasteDirectly ?? false)
+        setCardSize(settings.cardSize || 'medium')
       })
     })
     const unsubHidden = window.electronAPI.onPanelHidden(() => {
@@ -244,6 +247,7 @@ function App() {
         filterType={filterType}
         onFilterChange={setFilterType}
         panelPosition={panelPosition}
+        cardSize={cardSize}
       />
       <PreviewModal
         item={previewItem}

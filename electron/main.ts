@@ -27,6 +27,7 @@ interface ClipboardItem {
 
 type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
 type Language = 'en' | 'es' | 'fr' | 'de' | 'zh'
+type CardSize = 'small' | 'medium' | 'large'
 
 interface Settings {
   historyLimit: number
@@ -42,6 +43,7 @@ interface Settings {
   panelPosition: PanelPosition
   language: Language
   pasteDirectly: boolean
+  cardSize: CardSize
 }
 
 // Default pasteboard types to ignore (matches Maccy's approach)
@@ -71,7 +73,8 @@ const defaultSettings: Settings = {
   ignoredPasteboardTypes: DEFAULT_IGNORED_TYPES,
   panelPosition: 'bottom',
   language: 'en',
-  pasteDirectly: false // Default: copy only (user manually pastes)
+  pasteDirectly: false, // Default: copy only (user manually pastes)
+  cardSize: 'medium'
 }
 
 const store = new Store<{ history: ClipboardItem[], settings: Settings }>({

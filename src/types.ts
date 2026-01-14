@@ -19,6 +19,7 @@ export interface ClipboardItem {
 
 export type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
 export type Language = 'en' | 'es' | 'fr' | 'de' | 'zh'
+export type CardSize = 'small' | 'medium' | 'large'
 
 export interface Settings {
   historyLimit: number
@@ -34,6 +35,7 @@ export interface Settings {
   panelPosition: PanelPosition
   language: Language
   pasteDirectly: boolean // true = paste directly, false = copy only
+  cardSize: CardSize // small, medium, large
 }
 
 export interface ElectronAPI {

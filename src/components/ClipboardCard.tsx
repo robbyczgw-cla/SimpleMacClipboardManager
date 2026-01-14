@@ -1,4 +1,4 @@
-import { ClipboardItem } from '../types'
+import { ClipboardItem, CardSize } from '../types'
 
 interface ClipboardCardProps {
   item: ClipboardItem
@@ -11,6 +11,14 @@ interface ClipboardCardProps {
   onTogglePin: () => void
   onPreview?: () => void
   isVertical?: boolean
+  cardSize?: CardSize
+}
+
+// Card dimensions based on size
+const CARD_DIMENSIONS = {
+  small: { width: 160, height: 140, contentHeight: 72 },
+  medium: { width: 208, height: 176, contentHeight: 96 },
+  large: { width: 280, height: 200, contentHeight: 120 }
 }
 
 function formatTimeAgo(timestamp: number): string {
@@ -54,8 +62,10 @@ export default function ClipboardCard({
   onCopy,
   onTogglePin,
   onPreview,
-  isVertical = false
+  isVertical = false,
+  cardSize = 'medium'
 }: ClipboardCardProps) {
+  const dimensions = CARD_DIMENSIONS[cardSize]
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
     onCopy()
@@ -74,11 +84,16 @@ export default function ClipboardCard({
     }
     e.dataTransfer.effectAllowed = 'copy'
   }
+  // Dynamic line clamp based on card size
+  const lineClampClass = cardSize === 'small' ? 'line-clamp-3' : cardSize === 'large' ? 'line-clamp-6' : 'line-clamp-4'
+  const imageHeight = cardSize === 'small' ? 'h-14' : cardSize === 'large' ? 'h-24' : 'h-20'
+  const colorBoxSize = cardSize === 'small' ? 'w-12 h-12' : cardSize === 'large' ? 'w-20 h-20' : 'w-16 h-16'
+
   const renderContent = () => {
     switch (item.type) {
       case 'image':
         return (
-          <div className="w-full h-20 flex items-center justify-center overflow-hidden rounded relative">
+          <div className={`w-full ${imageHeight} flex items-center justify-center overflow-hidden rounded relative`}>
             <img
               src={item.thumbnail || item.content}
               alt="Clipboard image"
@@ -103,7 +118,7 @@ export default function ClipboardCard({
         return (
           <div className="flex flex-col items-center gap-2">
             <div
-              className="w-16 h-16 rounded-lg border border-white/20 shadow-inner"
+              className={`${colorBoxSize} rounded-lg border border-white/20 shadow-inner`}
               style={{ backgroundColor: item.metadata.colorHex || item.content }}
             />
             <code className="text-xs text-[var(--text-secondary)] font-mono">
@@ -156,7 +171,7 @@ export default function ClipboardCard({
 
       default:
         return (
-          <p className="text-sm text-[var(--text-primary)] line-clamp-4 whitespace-pre-wrap break-words leading-snug">
+          <p className={`text-sm text-[var(--text-primary)] ${lineClampClass} whitespace-pre-wrap break-words leading-snug`}>
             {item.content}
           </p>
         )
@@ -170,11 +185,12 @@ export default function ClipboardCard({
       onDoubleClick={onDoubleClick}
       onContextMenu={handleContextMenu}
       onDragStart={handleDragStart}
+      style={isVertical ? { height: dimensions.height - 32 } : { width: dimensions.width, height: dimensions.height }}
       className={`
         relative flex-shrink-0 p-3 rounded-2xl cursor-pointer
         transition-all duration-200 ease-out
         border group
-        ${isVertical ? 'w-full h-28' : 'w-52 h-44'}
+        ${isVertical ? 'w-full' : ''}
         ${isSelected
           ? 'glass-card-selected border-blue-500/40 scale-[1.02]'
           : 'glass-card card-glow border-[var(--border-color)] hover:bg-[var(--card-hover)] hover:border-white/20'
@@ -214,7 +230,7 @@ export default function ClipboardCard({
       </button>
 
       {/* Content - with top padding to avoid overlapping buttons */}
-      <div className="h-24 overflow-hidden mt-4">
+      <div className="overflow-hidden mt-4" style={{ height: dimensions.contentHeight }}>
         {renderContent()}
       </div>
 
