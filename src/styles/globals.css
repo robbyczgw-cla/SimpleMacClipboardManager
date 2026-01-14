@@ -3,29 +3,39 @@
 @tailwind utilities;
 
 :root {
-  --panel-bg: rgba(30, 30, 30, 0.92);
-  --card-bg: rgba(55, 55, 55, 0.85);
-  --card-hover: rgba(75, 75, 75, 0.9);
-  --card-selected: rgba(59, 130, 246, 0.4);
-  --border-color: rgba(255, 255, 255, 0.08);
+  --panel-bg: rgba(28, 28, 30, 0.95);
+  --card-bg: rgba(58, 58, 60, 0.8);
+  --card-hover: rgba(78, 78, 80, 0.9);
+  --card-selected: rgba(59, 130, 246, 0.35);
+  --border-color: rgba(255, 255, 255, 0.1);
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --accent: #007AFF;
+  --accent-hover: #0A84FF;
 }
 
 * {
   -webkit-user-select: none;
   user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   background: transparent;
   overflow: hidden;
 }
 
-/* Custom scrollbar for horizontal scroll */
+/* Smooth scrollbar */
+.scroll-container {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
 .scroll-container::-webkit-scrollbar {
-  height: 6px;
+  height: 5px;
 }
 
 .scroll-container::-webkit-scrollbar-track {
@@ -33,25 +43,28 @@ body {
 }
 
 .scroll-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  transition: background 0.2s ease;
 }
 
 .scroll-container::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Type badges */
-.badge-text { background: rgba(156, 163, 175, 0.3); }
-.badge-link { background: rgba(59, 130, 246, 0.3); }
-.badge-image { background: rgba(168, 85, 247, 0.3); }
-.badge-file { background: rgba(251, 191, 36, 0.3); }
-.badge-color { background: rgba(52, 211, 153, 0.3); }
+/* Type badges with subtle glow */
+.badge-text { background: rgba(142, 142, 147, 0.25); }
+.badge-link { background: rgba(10, 132, 255, 0.25); box-shadow: 0 0 8px rgba(10, 132, 255, 0.15); }
+.badge-image { background: rgba(175, 82, 222, 0.25); box-shadow: 0 0 8px rgba(175, 82, 222, 0.15); }
+.badge-file { background: rgba(255, 159, 10, 0.25); box-shadow: 0 0 8px rgba(255, 159, 10, 0.15); }
+.badge-color { background: rgba(48, 209, 88, 0.25); box-shadow: 0 0 8px rgba(48, 209, 88, 0.15); }
 
-/* Glass effect */
+/* Enhanced glass effect */
 .glass {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  background: var(--panel-bg);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 /* Truncate text */
@@ -71,11 +84,27 @@ body {
   -webkit-app-region: no-drag;
 }
 
-/* Card animation */
+/* Panel slide animation */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Card animation with stagger effect */
 @keyframes cardAppear {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(10px);
+    transform: scale(0.92) translateY(12px);
   }
   to {
     opacity: 1;
@@ -84,5 +113,70 @@ body {
 }
 
 .card-animate {
-  animation: cardAppear 0.2s ease-out forwards;
+  animation: cardAppear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Smooth card transitions */
+.card-transition {
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Hover glow effect for cards */
+.card-glow:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3),
+              0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Selected card glow */
+.card-selected-glow {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5),
+              0 8px 32px rgba(59, 130, 246, 0.25);
+}
+
+/* Button hover effects */
+.btn-hover {
+  transition: all 0.15s ease;
+}
+
+.btn-hover:hover {
+  transform: scale(1.05);
+}
+
+.btn-hover:active {
+  transform: scale(0.95);
+}
+
+/* Focus ring */
+input:focus, button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* Keyboard hint styling */
+kbd {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Mono', monospace;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* Pin star animation */
+@keyframes starPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.star-animate {
+  animation: starPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Subtle pulse for selected items */
+@keyframes subtlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+.pulse-subtle {
+  animation: subtlePulse 2s ease-in-out infinite;
 }
