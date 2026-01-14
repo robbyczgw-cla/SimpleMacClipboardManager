@@ -77,8 +77,15 @@ export default function ClipboardPanel({
     const item = items[index]
     if (!item) return null
 
+    // Add top padding to prevent clipping when cards scale up
+    const adjustedStyle = {
+      ...style,
+      top: typeof style.top === 'number' ? style.top + 6 : style.top,
+      left: typeof style.left === 'number' ? style.left + 6 : style.left,
+    }
+
     return (
-      <div style={style} className={isVertical ? 'px-3' : 'py-0'}>
+      <div style={adjustedStyle} className={isVertical ? 'px-3' : ''}>
         <ClipboardCard
           item={item}
           isSelected={index === selectedIndex}
@@ -114,8 +121,8 @@ export default function ClipboardPanel({
         {/* Clipboard items - Virtualized */}
         <div
           ref={containerRef}
-          className={`flex-1 ${isVertical ? 'overflow-hidden' : 'px-5 pb-3'}`}
-          style={{ minHeight: isVertical ? 0 : 180 }}
+          className={`flex-1 ${isVertical ? 'overflow-hidden' : 'px-5 pb-3 pt-2'}`}
+          style={{ minHeight: isVertical ? 0 : 190 }}
         >
           {items.length === 0 ? (
             <div className="flex items-center justify-center w-full h-full text-[var(--text-secondary)]">
@@ -128,14 +135,14 @@ export default function ClipboardPanel({
               itemCount={items.length}
               itemSize={VERTICAL_CARD_HEIGHT}
               width="100%"
-              className="scroll-container"
+              className="scroll-container pt-2"
             >
               {renderItem}
             </List>
           ) : (
             <List
               ref={listRef}
-              height={180}
+              height={190}
               itemCount={items.length}
               itemSize={CARD_WIDTH}
               width={containerSize.width - 40} // Account for padding
