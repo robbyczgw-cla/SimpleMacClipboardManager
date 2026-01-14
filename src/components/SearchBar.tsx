@@ -9,6 +9,7 @@ interface SearchBarProps {
   itemCount: number
   filterType: FilterType
   onFilterChange: (type: FilterType) => void
+  isVertical?: boolean
 }
 
 const FILTER_OPTIONS: { type: FilterType; icon: string; label: string }[] = [
@@ -19,7 +20,7 @@ const FILTER_OPTIONS: { type: FilterType; icon: string; label: string }[] = [
   { type: 'file', icon: '📁', label: 'Files' },
 ]
 
-export default function SearchBar({ value, onChange, itemCount, filterType, onFilterChange }: SearchBarProps) {
+export default function SearchBar({ value, onChange, itemCount, filterType, onFilterChange, isVertical = false }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Auto-focus when panel opens
@@ -32,7 +33,7 @@ export default function SearchBar({ value, onChange, itemCount, filterType, onFi
   }, [])
 
   return (
-    <div className="flex items-center gap-3">
+    <div className={`flex ${isVertical ? 'flex-col' : 'items-center'} gap-2`}>
       <div className="relative flex-1">
         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -45,19 +46,21 @@ export default function SearchBar({ value, onChange, itemCount, filterType, onFi
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Search clipboard..."
-          className="w-full pl-10 pr-20 py-2 bg-[var(--search-bg)] border border-[var(--border-color)] rounded-xl
+          placeholder="Search..."
+          className={`w-full pl-10 py-2 bg-[var(--search-bg)] border border-[var(--border-color)] rounded-xl
                      text-[var(--text-primary)] placeholder-[var(--text-tertiary)]
                      focus:outline-none focus:border-[var(--accent)]/40 focus:ring-2 focus:ring-[var(--accent)]/10
-                     transition-all text-sm"
+                     transition-all text-sm ${isVertical ? 'pr-4' : 'pr-20'}`}
         />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] text-xs">
-          {itemCount} items
-        </div>
+        {!isVertical && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] text-xs">
+            {itemCount} items
+          </div>
+        )}
       </div>
 
       {/* Filter buttons */}
-      <div className="flex gap-1">
+      <div className={`flex gap-1 ${isVertical ? 'flex-wrap justify-center' : ''}`}>
         {FILTER_OPTIONS.map(({ type, icon, label }) => (
           <button
             key={type}

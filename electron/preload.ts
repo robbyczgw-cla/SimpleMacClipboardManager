@@ -18,6 +18,7 @@ interface ClipboardItem {
 contextBridge.exposeInMainWorld('electronAPI', {
   getHistory: (): Promise<ClipboardItem[]> => ipcRenderer.invoke('get-history'),
   pasteItem: (item: ClipboardItem): Promise<void> => ipcRenderer.invoke('paste-item', item),
+  pastePlain: (item: ClipboardItem): Promise<void> => ipcRenderer.invoke('paste-plain', item),
   deleteItem: (id: string): Promise<void> => ipcRenderer.invoke('delete-item', id),
   togglePin: (id: string): Promise<void> => ipcRenderer.invoke('toggle-pin', id),
   clearHistory: (): Promise<void> => ipcRenderer.invoke('clear-history'),

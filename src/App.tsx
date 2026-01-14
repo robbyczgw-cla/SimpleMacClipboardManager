@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ClipboardItem } from './types'
+import { ClipboardItem, PanelPosition } from './types'
 import ClipboardPanel from './components/ClipboardPanel'
 import SettingsPage from './components/SettingsPage'
+import PreviewModal from './components/PreviewModal'
 
 type FilterType = 'all' | ClipboardItem['type']
 
@@ -11,6 +12,8 @@ function App() {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isVisible, setIsVisible] = useState(false)
   const [filterType, setFilterType] = useState<FilterType>('all')
+  const [previewItem, setPreviewItem] = useState<ClipboardItem | null>(null)
+  const [panelPosition, setPanelPosition] = useState<PanelPosition>('bottom')
 
   // Check if we're in settings mode (hash routing)
   const isSettingsPage = window.location.hash === '#settings'
@@ -18,8 +21,11 @@ function App() {
   useEffect(() => {
     if (isSettingsPage) return // Don't load clipboard stuff for settings page
 
-    // Load initial history
+    // Load initial history and settings
     window.electronAPI.getHistory().then(setHistory)
+    window.electronAPI.getSettings().then(settings => {
+      setPanelPosition(settings.panelPosition || 'bottom')
+    })
 
     // Listen for updates
     const unsubHistory = window.electronAPI.onHistoryUpdated(setHistory)
@@ -27,6 +33,10 @@ function App() {
       setIsVisible(true)
       setSelectedIndex(0)
       setSearchQuery('')
+      // Reload settings in case they changed
+      window.electronAPI.getSettings().then(settings => {
+        setPanelPosition(settings.panelPosition || 'bottom')
+      })
     })
     const unsubHidden = window.electronAPI.onPanelHidden(() => {
       setIsVisible(false)
@@ -51,6 +61,10 @@ function App() {
     window.electronAPI.pasteItem(item)
   }, [])
 
+  const handlePastePlain = useCallback((item: ClipboardItem) => {
+    window.electronAPI.pastePlain(item)
+  }, [])
+
   const handleDelete = useCallback((id: string) => {
     window.electronAPI.deleteItem(id)
   }, [])
@@ -59,27 +73,48 @@ function App() {
     window.electronAPI.togglePin(id)
   }, [])
 
+  const isVertical = panelPosition === 'left' || panelPosition === 'right'
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isVisible) return
 
     switch (e.key) {
       case 'ArrowLeft':
+      case 'ArrowUp':
         e.preventDefault()
         setSelectedIndex(prev => Math.max(0, prev - 1))
         break
       case 'ArrowRight':
+      case 'ArrowDown':
         e.preventDefault()
         setSelectedIndex(prev => Math.min(filteredHistory.length - 1, prev + 1))
         break
       case 'Enter':
         e.preventDefault()
         if (filteredHistory[selectedIndex]) {
-          handlePaste(filteredHistory[selectedIndex])
+          if (e.shiftKey) {
+            // Shift+Enter = paste as plain text
+            handlePastePlain(filteredHistory[selectedIndex])
+          } else {
+            handlePaste(filteredHistory[selectedIndex])
+          }
         }
         break
       case 'Escape':
         e.preventDefault()
-        window.electronAPI.hideWindow()
+        if (previewItem) {
+          setPreviewItem(null)
+        } else {
+          window.electronAPI.hideWindow()
+        }
+        break
+      case ' ':
+        e.preventDefault()
+        if (previewItem) {
+          setPreviewItem(null)
+        } else if (filteredHistory[selectedIndex]) {
+          setPreviewItem(filteredHistory[selectedIndex])
+        }
         break
       case 'Backspace':
         if (e.metaKey || e.ctrlKey) {
@@ -101,7 +136,7 @@ function App() {
         }
         break
     }
-  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handleDelete])
+  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleDelete, previewItem, isVertical])
 
   useEffect(() => {
     if (isSettingsPage) return
@@ -120,18 +155,25 @@ function App() {
   }
 
   return (
-    <ClipboardPanel
-      items={filteredHistory}
-      selectedIndex={selectedIndex}
-      searchQuery={searchQuery}
-      onSearchChange={setSearchQuery}
-      onSelect={setSelectedIndex}
-      onPaste={handlePaste}
-      onDelete={handleDelete}
-      onTogglePin={handleTogglePin}
-      filterType={filterType}
-      onFilterChange={setFilterType}
-    />
+    <>
+      <ClipboardPanel
+        items={filteredHistory}
+        selectedIndex={selectedIndex}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSelect={setSelectedIndex}
+        onPaste={handlePaste}
+        onDelete={handleDelete}
+        onTogglePin={handleTogglePin}
+        filterType={filterType}
+        onFilterChange={setFilterType}
+        panelPosition={panelPosition}
+      />
+      <PreviewModal
+        item={previewItem}
+        onClose={() => setPreviewItem(null)}
+      />
+    </>
   )
 }
 

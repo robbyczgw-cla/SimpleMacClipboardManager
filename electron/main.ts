@@ -23,6 +23,8 @@ interface ClipboardItem {
   pinned?: boolean
 }
 
+type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
+
 interface Settings {
   historyLimit: number
   pollingInterval: number
@@ -33,6 +35,7 @@ interface Settings {
   playSoundOnCopy: boolean
   ignoreDuplicates: boolean
   ignorePasswordManagers: boolean
+  panelPosition: PanelPosition
 }
 
 const defaultSettings: Settings = {
@@ -44,7 +47,8 @@ const defaultSettings: Settings = {
   hotkey: 'Option+Space',
   playSoundOnCopy: false,
   ignoreDuplicates: true,
-  ignorePasswordManagers: true
+  ignorePasswordManagers: true,
+  panelPosition: 'bottom'
 }
 
 const store = new Store<{ history: ClipboardItem[], settings: Settings }>({
@@ -64,15 +68,29 @@ function getSettings(): Settings {
   return store.get('settings') || defaultSettings
 }
 
+function getWindowBounds() {
+  const { width, height } = screen.getPrimaryDisplay().size
+  const settings = getSettings()
+  const panelSize = 340
+
+  switch (settings.panelPosition) {
+    case 'top':
+      return { width, height: panelSize, x: 0, y: 0 }
+    case 'left':
+      return { width: panelSize, height, x: 0, y: 0 }
+    case 'right':
+      return { width: panelSize, height, x: width - panelSize, y: 0 }
+    case 'bottom':
+    default:
+      return { width, height: panelSize, x: 0, y: height - panelSize }
+  }
+}
+
 function createWindow() {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize
-  const panelHeight = 340
+  const bounds = getWindowBounds()
 
   mainWindow = new BrowserWindow({
-    width: width,
-    height: panelHeight,
-    x: 0,
-    y: height - panelHeight,
+    ...bounds,
     frame: false,
     transparent: true,
     vibrancy: 'under-window',
@@ -213,8 +231,8 @@ function toggleWindow() {
   if (mainWindow.isVisible()) {
     mainWindow.hide()
   } else {
-    const { height } = screen.getPrimaryDisplay().workAreaSize
-    mainWindow.setPosition(0, height - 340)
+    const bounds = getWindowBounds()
+    mainWindow.setBounds(bounds)
     mainWindow.show()
     mainWindow.focus()
     mainWindow.webContents.send('panel-shown')
@@ -375,6 +393,17 @@ function applySettings(settings: Settings) {
 
   // Restart polling with new interval
   startClipboardPolling()
+
+  // Re-register hotkey if changed
+  globalShortcut.unregisterAll()
+  const hotkeyRegistered = globalShortcut.register(settings.hotkey, toggleWindow)
+  console.log('Hotkey re-registered:', settings.hotkey, hotkeyRegistered)
+
+  // Update window position if panel position changed
+  if (mainWindow && !mainWindow.isVisible()) {
+    const bounds = getWindowBounds()
+    mainWindow.setBounds(bounds)
+  }
 }
 
 app.whenReady().then(() => {
@@ -426,8 +455,23 @@ app.whenReady().then(() => {
   ipcMain.handle('get-history', () => store.get('history'))
 
   ipcMain.handle('paste-item', (_, item: ClipboardItem) => {
-    clipboard.writeText(item.content)
+    if (item.type === 'image' && item.content.startsWith('data:')) {
+      // For images, write the image to clipboard
+      const image = nativeImage.createFromDataURL(item.content)
+      clipboard.writeImage(image)
+    } else {
+      clipboard.writeText(item.content)
+    }
     lastClipboardContent = item.content
+    lastImageDataUrl = item.type === 'image' ? item.content : ''
+    mainWindow?.hide()
+  })
+
+  ipcMain.handle('paste-plain', (_, item: ClipboardItem) => {
+    // Always paste as plain text, stripping any formatting
+    const plainText = item.type === 'image' ? '[Image]' : item.content.replace(/<[^>]*>/g, '')
+    clipboard.writeText(plainText)
+    lastClipboardContent = plainText
     mainWindow?.hide()
   })
 

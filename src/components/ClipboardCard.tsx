@@ -8,6 +8,7 @@ interface ClipboardCardProps {
   onDelete: () => void
   onCopy: () => void
   onTogglePin: () => void
+  isVertical?: boolean
 }
 
 function formatTimeAgo(timestamp: number): string {
@@ -48,7 +49,8 @@ export default function ClipboardCard({
   onDoubleClick,
   onDelete,
   onCopy,
-  onTogglePin
+  onTogglePin,
+  isVertical = false
 }: ClipboardCardProps) {
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -117,9 +119,10 @@ export default function ClipboardCard({
       onDoubleClick={onDoubleClick}
       onContextMenu={handleContextMenu}
       className={`
-        card-animate card-glow relative flex-shrink-0 w-48 h-36 p-3 rounded-2xl cursor-pointer
+        card-animate card-glow relative flex-shrink-0 p-3 rounded-2xl cursor-pointer
         transition-all duration-200 ease-out
         border backdrop-blur-sm
+        ${isVertical ? 'w-full h-24' : 'w-48 h-36'}
         ${isSelected
           ? 'bg-[var(--card-selected)] border-blue-500/60 scale-[1.03] card-selected-glow'
           : 'bg-[var(--card-bg)] border-[var(--border-color)] hover:bg-[var(--card-hover)] hover:border-white/15 hover:scale-[1.01]'

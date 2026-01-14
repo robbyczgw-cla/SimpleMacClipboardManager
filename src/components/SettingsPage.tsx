@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 
+type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
+
 interface Settings {
   historyLimit: number
   pollingInterval: number
@@ -10,6 +12,7 @@ interface Settings {
   playSoundOnCopy: boolean
   ignoreDuplicates: boolean
   ignorePasswordManagers: boolean
+  panelPosition: PanelPosition
 }
 
 const defaultSettings: Settings = {
@@ -18,10 +21,11 @@ const defaultSettings: Settings = {
   launchAtLogin: false,
   clearOnQuit: false,
   showInDock: false,
-  hotkey: 'CommandOrControl+Shift+V',
+  hotkey: 'Option+Space',
   playSoundOnCopy: false,
   ignoreDuplicates: true,
-  ignorePasswordManagers: true
+  ignorePasswordManagers: true,
+  panelPosition: 'bottom'
 }
 
 export default function SettingsPage() {
@@ -166,6 +170,27 @@ export default function SettingsPage() {
                 className="w-4 h-4 rounded accent-blue-500"
               />
             </div>
+          </div>
+        </section>
+
+        {/* Appearance Section */}
+        <section className="bg-white/5 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-white/80 mb-4">Appearance</h3>
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm text-white/70">Panel position</label>
+              <p className="text-xs text-white/40">Where the clipboard panel appears</p>
+            </div>
+            <select
+              value={settings.panelPosition}
+              onChange={e => handleChange('panelPosition', e.target.value as PanelPosition)}
+              className="bg-white/10 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+            >
+              <option value="bottom">Bottom (Default)</option>
+              <option value="top">Top</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
           </div>
         </section>
 

@@ -14,14 +14,20 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 ## Features
 
 - **Instant Access** - Press `⌥Space` to open clipboard history
-- **Visual Previews** - See text, links, colors, and file paths at a glance
+- **Image Support** - Capture and preview screenshots and images
+- **Visual Previews** - See text, links, colors, images, and file paths at a glance
+- **Quick Look Preview** - Press `Space` to preview any item in detail
 - **Smart Detection** - Automatically categorizes content types
 - **Fast Search** - Type to filter through your clipboard history
-- **Filter by Type** - Quick filter buttons for text, links, colors, files
+- **Filter by Type** - Quick filter buttons for text, links, colors, files, images
 - **Pin Favorites** - Star important items to keep them at the top
 - **Quick Paste** - `⌘1-9` to instantly paste items by position
+- **Paste as Plain Text** - `⇧Enter` to paste without formatting
 - **Source App Tracking** - See which app content was copied from
 - **Keyboard First** - Navigate with arrow keys, paste with Enter
+- **Flexible Panel Position** - Choose where the panel appears (top, bottom, left, right)
+- **Dark/Light Mode** - Automatically adapts to your system theme
+- **Live Settings** - Most settings apply instantly without restart
 - **Local Only** - All data stays on your Mac, no cloud sync
 - **Privacy Focused** - Ignores password managers automatically
 - **Lightweight** - Minimal resource usage, runs in menu bar
@@ -54,10 +60,12 @@ npm run build
 | Shortcut | Action |
 |----------|--------|
 | `⌥Space` | Toggle clipboard panel |
-| `←` `→` | Navigate between items |
+| `←` `→` or `↑` `↓` | Navigate between items |
 | `Enter` | Paste selected item |
+| `⇧Enter` | Paste as plain text |
+| `Space` | Quick Look preview |
 | `⌘1-9` | Quick paste items 1-9 |
-| `Esc` | Close panel |
+| `Esc` | Close panel / preview |
 | `⌘⌫` | Delete selected item |
 | Right-click | Paste item |
 | Type | Search clipboard history |
@@ -83,11 +91,15 @@ Access settings via menu bar → Settings:
 - **Polling interval** - How often to check clipboard (250-1000ms)
 - **Launch at login** - Start automatically when you log in
 - **Show in Dock** - Display app icon in the Dock
-- **Play sound on copy** - Audio feedback when clipboard changes
+
+### Appearance
+- **Panel position** - Where the clipboard panel appears (bottom, top, left, right)
+
+### Keyboard
+- **Global hotkey** - Customize the keyboard shortcut
 
 ### Privacy
 - **Ignore password managers** - Don't capture from 1Password, Bitwarden, etc.
-- **Auto-clear sensitive data** - Remove passwords after a timeout
 
 ## Privacy
 
@@ -103,6 +115,11 @@ SimpleMacClipboardManager is completely local:
 - **Build**: Vite
 - **Styling**: Tailwind CSS
 - **Storage**: electron-store
+
+## Acknowledgments
+
+This project was inspired by:
+- [Maccy](https://github.com/p0deje/Maccy) - A lightweight open-source clipboard manager for macOS
 
 ## License
 
