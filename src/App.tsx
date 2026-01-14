@@ -14,6 +14,7 @@ function App() {
   const [filterType, setFilterType] = useState<FilterType>('all')
   const [previewItem, setPreviewItem] = useState<ClipboardItem | null>(null)
   const [panelPosition, setPanelPosition] = useState<PanelPosition>('bottom')
+  const [pasteDirectly, setPasteDirectly] = useState(false)
 
   // Check if we're in settings mode (hash routing)
   const isSettingsPage = window.location.hash === '#settings'
@@ -25,6 +26,7 @@ function App() {
     window.electronAPI.getHistory().then(setHistory)
     window.electronAPI.getSettings().then(settings => {
       setPanelPosition(settings.panelPosition || 'bottom')
+      setPasteDirectly(settings.pasteDirectly ?? false)
     })
 
     // Listen for updates
@@ -36,6 +38,7 @@ function App() {
       // Reload settings in case they changed
       window.electronAPI.getSettings().then(settings => {
         setPanelPosition(settings.panelPosition || 'bottom')
+        setPasteDirectly(settings.pasteDirectly ?? false)
       })
     })
     const unsubHidden = window.electronAPI.onPanelHidden(() => {
@@ -63,6 +66,10 @@ function App() {
 
   const handlePastePlain = useCallback((item: ClipboardItem) => {
     window.electronAPI.pastePlain(item)
+  }, [])
+
+  const handleCopyOnly = useCallback((item: ClipboardItem) => {
+    window.electronAPI.copyOnly(item)
   }, [])
 
   const handleDelete = useCallback((id: string) => {
@@ -93,10 +100,15 @@ function App() {
         e.preventDefault()
         if (filteredHistory[selectedIndex]) {
           if (e.shiftKey) {
-            // Shift+Enter = paste as plain text
+            // Shift+Enter = paste as plain text (always auto-paste)
             handlePastePlain(filteredHistory[selectedIndex])
           } else {
-            handlePaste(filteredHistory[selectedIndex])
+            // Enter respects pasteDirectly setting
+            if (pasteDirectly) {
+              handlePaste(filteredHistory[selectedIndex])
+            } else {
+              handleCopyOnly(filteredHistory[selectedIndex])
+            }
           }
         }
         break
@@ -135,8 +147,17 @@ function App() {
           }
         }
         break
+      // Cmd+C = Copy only (no auto-paste)
+      case 'c':
+        if (e.metaKey || e.ctrlKey) {
+          e.preventDefault()
+          if (filteredHistory[selectedIndex]) {
+            handleCopyOnly(filteredHistory[selectedIndex])
+          }
+        }
+        break
     }
-  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleDelete, previewItem, isVertical])
+  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleCopyOnly, handleDelete, previewItem, isVertical, pasteDirectly])
 
   useEffect(() => {
     if (isSettingsPage) return
@@ -162,7 +183,7 @@ function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onSelect={setSelectedIndex}
-        onPaste={handlePaste}
+        onPaste={pasteDirectly ? handlePaste : handleCopyOnly}
         onDelete={handleDelete}
         onTogglePin={handleTogglePin}
         filterType={filterType}

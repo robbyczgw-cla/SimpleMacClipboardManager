@@ -5,6 +5,32 @@ All notable changes to SimpleMacClipboardManager will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-01-14
+
+### Added
+- **Liquid Glass Design** - Modern macOS-inspired UI with translucent panels, gradient overlays, and soft glows
+- **About Dialog** - Shows version info with links to GitHub repo and author profile
+- **Enhanced Visual Effects** - Stronger backdrop blur (80px), subtle gradient overlays, glowing selection states
+
+### Changed
+- Cards now have glass effect with inner shadows and gradient backgrounds
+- Filter buttons have liquid glass styling with glow effects when selected
+- Search input has focus glow effect
+- Type badges now have backdrop blur and subtle shadows
+- Improved dark and light mode color schemes for better transparency
+
+## [0.4.0] - 2026-01-14
+
+### Added
+- **Paste Directly Setting** - Choose between copy-only mode (default, like Paste app) or auto-paste mode
+- **⌘C Shortcut** - Always copies without auto-pasting, regardless of settings
+
+### Changed
+- Default behavior now matches Paste app: selecting an item copies to clipboard (user manually pastes with ⌘V)
+- Double-click and right-click behavior controlled by "Paste directly" setting
+- Enter key behavior controlled by "Paste directly" setting
+- Shift+Enter always pastes directly as plain text
+
 ## [0.3.0] - 2026-01-14
 
 ### Added

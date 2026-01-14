@@ -153,9 +153,9 @@ export default function ClipboardPanel({
             <>
               <div className="flex gap-4">
                 <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">↵</kbd> Paste</span>
+                <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">⌘C</kbd> Copy</span>
                 <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">⇧↵</kbd> Plain</span>
                 <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">Space</kbd> Preview</span>
-                <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">⌘1-9</kbd> Quick</span>
               </div>
               <span className="opacity-70">⌥Space to toggle</span>
             </>

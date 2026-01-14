@@ -30,12 +30,14 @@ export interface Settings {
   ignorePasswordManagers: boolean
   panelPosition: PanelPosition
   language: Language
+  pasteDirectly: boolean // true = paste directly, false = copy only
 }
 
 export interface ElectronAPI {
   getHistory: () => Promise<ClipboardItem[]>
   pasteItem: (item: ClipboardItem) => Promise<void>
   pastePlain: (item: ClipboardItem) => Promise<void>
+  copyOnly: (item: ClipboardItem) => Promise<void>
   deleteItem: (id: string) => Promise<void>
   togglePin: (id: string) => Promise<void>
   clearHistory: () => Promise<void>

@@ -32,6 +32,7 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 - **Local Only** - All data stays on your Mac, no cloud sync
 - **Privacy Focused** - Ignores password managers automatically
 - **Lightweight** - Minimal resource usage, runs in menu bar
+- **Liquid Glass Design** - Modern macOS-inspired translucent UI with blur effects
 
 ## Installation
 
@@ -62,20 +63,31 @@ npm run build
 |----------|--------|
 | `⌥Space` | Toggle clipboard panel |
 | `←` `→` or `↑` `↓` | Navigate between items |
-| `Enter` | Paste selected item |
-| `⇧Enter` | Paste as plain text |
+| `Enter` | Copy to clipboard (or auto-paste if enabled) |
+| `⌘C` | Copy to clipboard only |
+| `⇧Enter` | Paste directly as plain text |
 | `Space` | Quick Look preview |
 | `⌘1-9` | Quick paste items 1-9 |
 | `Esc` | Close panel / preview |
 | `⌘⌫` | Delete selected item |
-| Right-click | Paste item |
 | Type | Search clipboard history |
+
+### Mouse Actions
+
+| Action | Result |
+|--------|--------|
+| Click | Select item |
+| Double-click | Copy to clipboard (or auto-paste if enabled) |
+| Right-click | Copy to clipboard (or auto-paste if enabled) |
+| Click star icon | Pin/unpin item |
+| Click × icon | Delete item |
 
 ### Menu Bar
 
 Click the clipboard icon in the menu bar to:
 - Show clipboard panel
 - Open settings
+- View "How to Use" guide
 - Clear history
 - Quit the app
 
@@ -92,6 +104,7 @@ Access settings via menu bar → Settings:
 - **Polling interval** - How often to check clipboard (250-1000ms)
 - **Launch at login** - Start automatically when you log in
 - **Show in Dock** - Display app icon in the Dock
+- **Paste directly** - When enabled, auto-paste into previous app (default: off, copy only)
 
 ### Appearance
 - **Panel position** - Where the clipboard panel appears (bottom, top, left, right)
@@ -117,6 +130,43 @@ SimpleMacClipboardManager is completely local:
 - **Build**: Vite
 - **Styling**: Tailwind CSS
 - **Storage**: electron-store
+
+## Comparison with Maccy
+
+SimpleMacClipboardManager was inspired by [Maccy](https://github.com/p0deje/Maccy). Here's how they compare:
+
+| Feature | SimpleMacClipboardManager | Maccy |
+|---------|---------------------------|-------|
+| **Price** | Free | Free |
+| **UI Style** | Liquid glass panel (Paste-like) | Native dropdown menu |
+| **Image Preview** | Thumbnails + Quick Look | Small thumbnails |
+| **Visual Previews** | Large cards with type badges | Text-based list |
+| **Panel Position** | Bottom, Top, Left, Right | Near menu bar |
+| **Multi-Language** | 5 languages | 20+ languages |
+| **Search** | Inline search bar | Inline search |
+| **Pin/Favorite** | Yes | No |
+| **Source App Tracking** | Yes | Yes |
+| **Quick Paste (⌘1-9)** | Yes | No |
+| **Paste as Plain Text** | Yes | Yes |
+| **Password Manager Ignore** | Yes | Yes |
+| **Dark/Light Mode** | Auto (system) | Auto (system) |
+| **Memory Usage** | ~100-150MB (Electron) | ~15-30MB (native) |
+| **Native Feel** | Good (vibrancy blur) | Excellent (AppKit) |
+| **Customization** | Panel position, hotkey | Extensive |
+| **Open Source** | Yes (MIT) | Yes (MIT) |
+
+### When to choose SimpleMacClipboardManager
+- You prefer a visual, card-based interface like the Paste app
+- You want large image previews and Quick Look support
+- You need flexible panel positioning
+- You use quick paste shortcuts (⌘1-9)
+- You want to pin frequently used items
+
+### When to choose Maccy
+- You prefer a native, lightweight dropdown menu
+- Memory usage is a priority
+- You need extensive customization options
+- You prefer the traditional clipboard manager UX
 
 ## Acknowledgments
 

@@ -318,7 +318,7 @@ const de: Translations = {
   color: 'Farbe',
   colors: 'Farben',
 
-  paste: 'Einfügen',
+  paste: 'Kopieren',
   plain: 'Nur Text',
   preview: 'Vorschau',
   quick: 'Schnell',
@@ -390,7 +390,7 @@ const zh: Translations = {
   color: '颜色',
   colors: '颜色',
 
-  paste: '粘贴',
+  paste: '复制',
   plain: '纯文本',
   preview: '预览',
   quick: '快速',

@@ -47,10 +47,13 @@ export default function SearchBar({ value, onChange, itemCount, filterType, onFi
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Search..."
-          className={`w-full pl-10 py-2.5 bg-[var(--search-bg)] border border-[var(--border-color)] rounded-xl
+          className={`w-full pl-10 py-2.5 bg-[var(--search-bg)] backdrop-blur-xl
+                     border border-[var(--border-color)] rounded-xl
                      text-[var(--text-primary)] placeholder-[var(--text-tertiary)]
-                     focus:outline-none focus:border-[var(--accent)]/40 focus:ring-2 focus:ring-[var(--accent)]/10
-                     transition-all text-base ${isVertical ? 'pr-4' : 'pr-20'}`}
+                     focus:outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20
+                     focus:shadow-[0_0_20px_var(--accent-glow)]
+                     transition-all duration-200 text-base ${isVertical ? 'pr-4' : 'pr-20'}`}
+          style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.05)' }}
         />
         {!isVertical && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] text-xs">
@@ -59,16 +62,16 @@ export default function SearchBar({ value, onChange, itemCount, filterType, onFi
         )}
       </div>
 
-      {/* Filter buttons */}
-      <div className={`flex gap-1 ${isVertical ? 'flex-wrap justify-center' : ''}`}>
+      {/* Filter buttons - Liquid Glass */}
+      <div className={`flex gap-1.5 ${isVertical ? 'flex-wrap justify-center' : ''}`}>
         {FILTER_OPTIONS.map(({ type, icon, label }) => (
           <button
             key={type}
             onClick={() => onFilterChange(type)}
-            className={`px-2 py-1.5 rounded-md text-xs transition-all
+            className={`px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200 backdrop-blur-sm
               ${filterType === type
-                ? 'bg-blue-500/30 text-blue-300 border border-blue-500/50'
-                : 'bg-white/5 text-[var(--text-secondary)] border border-transparent hover:bg-white/10'
+                ? 'bg-blue-500/25 text-blue-300 border border-blue-400/40 shadow-[0_0_16px_rgba(59,130,246,0.3)]'
+                : 'bg-white/5 text-[var(--text-secondary)] border border-white/10 hover:bg-white/10 hover:border-white/20'
               }`}
             title={label}
           >

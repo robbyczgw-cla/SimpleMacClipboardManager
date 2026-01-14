@@ -119,15 +119,15 @@ export default function ClipboardCard({
       onDoubleClick={onDoubleClick}
       onContextMenu={handleContextMenu}
       className={`
-        card-animate card-glow relative flex-shrink-0 p-3 rounded-2xl cursor-pointer
-        transition-all duration-200 ease-out
-        border backdrop-blur-sm
+        card-animate relative flex-shrink-0 p-3 rounded-2xl cursor-pointer
+        transition-all duration-300 ease-out
+        border
         ${isVertical ? 'w-full h-28' : 'w-52 h-44'}
         ${isSelected
-          ? 'bg-[var(--card-selected)] border-blue-500/60 scale-[1.03] card-selected-glow'
-          : 'bg-[var(--card-bg)] border-[var(--border-color)] hover:bg-[var(--card-hover)] hover:border-white/15 hover:scale-[1.01]'
+          ? 'glass-card-selected border-blue-500/40 scale-[1.02]'
+          : 'glass-card card-glow border-[var(--border-color)] hover:bg-[var(--card-hover)] hover:border-white/20'
         }
-        ${item.pinned ? 'ring-1 ring-yellow-500/30' : ''}
+        ${item.pinned ? 'ring-1 ring-yellow-400/40' : ''}
       `}
     >
       {/* Pin button */}

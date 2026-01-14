@@ -15,6 +15,7 @@ interface Settings {
   ignorePasswordManagers: boolean
   panelPosition: PanelPosition
   language: Language
+  pasteDirectly: boolean
 }
 
 const defaultSettings: Settings = {
@@ -28,7 +29,8 @@ const defaultSettings: Settings = {
   ignoreDuplicates: true,
   ignorePasswordManagers: true,
   panelPosition: 'bottom',
-  language: 'en'
+  language: 'en',
+  pasteDirectly: false
 }
 
 export default function SettingsPage() {
@@ -52,13 +54,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#2a2a2a] text-white p-6 pt-10">
+    <div className="h-full bg-[#2a2a2a] text-white p-6 pt-10 flex flex-col">
       {/* Drag region for title bar */}
       <div className="absolute top-0 left-0 right-0 h-8 app-drag" />
 
       <h1 className="text-xl font-semibold mb-6">{t.settings}</h1>
 
-      <div className="space-y-6 max-h-[480px] overflow-y-auto pr-2">
+      <div className="space-y-6 flex-1 overflow-y-auto pr-2">
         {/* History Section */}
         <section className="bg-white/5 rounded-lg p-4">
           <h3 className="text-sm font-medium text-white/80 mb-4">{t.history}</h3>
@@ -153,6 +155,18 @@ export default function SettingsPage() {
                 type="checkbox"
                 checked={settings.playSoundOnCopy}
                 onChange={e => handleChange('playSoundOnCopy', e.target.checked)}
+                className="w-4 h-4 rounded accent-blue-500"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-white/70">Paste directly</label>
+                <p className="text-xs text-white/40">Auto-paste when selecting (off = copy only)</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.pasteDirectly}
+                onChange={e => handleChange('pasteDirectly', e.target.checked)}
                 className="w-4 h-4 rounded accent-blue-500"
               />
             </div>

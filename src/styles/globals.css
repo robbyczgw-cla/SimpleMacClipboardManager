@@ -2,39 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark mode (default) */
+/* Dark mode (default) - Liquid Glass Design */
 :root {
-  --panel-bg: rgba(22, 22, 24, 0.85);
-  --panel-border: rgba(255, 255, 255, 0.12);
-  --card-bg: rgba(255, 255, 255, 0.08);
-  --card-hover: rgba(255, 255, 255, 0.12);
-  --card-selected: rgba(59, 130, 246, 0.35);
-  --border-color: rgba(255, 255, 255, 0.1);
+  --panel-bg: rgba(18, 18, 20, 0.72);
+  --panel-bg-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  --panel-border: rgba(255, 255, 255, 0.18);
+  --card-bg: rgba(255, 255, 255, 0.06);
+  --card-bg-gradient: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+  --card-hover: rgba(255, 255, 255, 0.1);
+  --card-selected: rgba(59, 130, 246, 0.28);
+  --card-selected-gradient: linear-gradient(145deg, rgba(59, 130, 246, 0.35) 0%, rgba(59, 130, 246, 0.2) 100%);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-glow: rgba(255, 255, 255, 0.06);
   --text-primary: rgba(255, 255, 255, 0.98);
   --text-secondary: rgba(255, 255, 255, 0.7);
   --text-tertiary: rgba(255, 255, 255, 0.5);
   --accent: #0A84FF;
   --accent-hover: #409CFF;
-  --search-bg: rgba(255, 255, 255, 0.08);
-  --kbd-bg: rgba(255, 255, 255, 0.12);
+  --accent-glow: rgba(10, 132, 255, 0.4);
+  --search-bg: rgba(255, 255, 255, 0.06);
+  --kbd-bg: rgba(255, 255, 255, 0.1);
+  --shadow-color: rgba(0, 0, 0, 0.4);
+  --inner-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
 }
 
-/* Light mode */
+/* Light mode - Liquid Glass Design */
 @media (prefers-color-scheme: light) {
   :root {
-    --panel-bg: rgba(246, 246, 248, 0.88);
-    --panel-border: rgba(0, 0, 0, 0.12);
-    --card-bg: rgba(255, 255, 255, 0.8);
-    --card-hover: rgba(255, 255, 255, 0.95);
-    --card-selected: rgba(59, 130, 246, 0.3);
-    --border-color: rgba(0, 0, 0, 0.1);
+    --panel-bg: rgba(255, 255, 255, 0.65);
+    --panel-bg-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+    --panel-border: rgba(255, 255, 255, 0.8);
+    --card-bg: rgba(255, 255, 255, 0.55);
+    --card-bg-gradient: linear-gradient(145deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.5) 100%);
+    --card-hover: rgba(255, 255, 255, 0.75);
+    --card-selected: rgba(59, 130, 246, 0.22);
+    --card-selected-gradient: linear-gradient(145deg, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.15) 100%);
+    --border-color: rgba(0, 0, 0, 0.08);
+    --border-glow: rgba(255, 255, 255, 0.5);
     --text-primary: rgba(0, 0, 0, 0.92);
     --text-secondary: rgba(0, 0, 0, 0.65);
     --text-tertiary: rgba(0, 0, 0, 0.45);
     --accent: #007AFF;
     --accent-hover: #0A84FF;
-    --search-bg: rgba(0, 0, 0, 0.05);
-    --kbd-bg: rgba(0, 0, 0, 0.08);
+    --accent-glow: rgba(0, 122, 255, 0.35);
+    --search-bg: rgba(0, 0, 0, 0.04);
+    --kbd-bg: rgba(0, 0, 0, 0.06);
+    --shadow-color: rgba(0, 0, 0, 0.12);
+    --inner-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8);
   }
 }
 
@@ -76,20 +90,65 @@ body {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Type badges with subtle glow */
-.badge-text { background: rgba(142, 142, 147, 0.25); }
-.badge-link { background: rgba(10, 132, 255, 0.25); box-shadow: 0 0 8px rgba(10, 132, 255, 0.15); }
-.badge-image { background: rgba(175, 82, 222, 0.25); box-shadow: 0 0 8px rgba(175, 82, 222, 0.15); }
-.badge-file { background: rgba(255, 159, 10, 0.25); box-shadow: 0 0 8px rgba(255, 159, 10, 0.15); }
-.badge-color { background: rgba(48, 209, 88, 0.25); box-shadow: 0 0 8px rgba(48, 209, 88, 0.15); }
+/* Type badges with liquid glass effect */
+.badge-text {
+  background: rgba(142, 142, 147, 0.2);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(142, 142, 147, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.badge-link {
+  background: rgba(10, 132, 255, 0.2);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(10, 132, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+.badge-image {
+  background: rgba(175, 82, 222, 0.2);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(175, 82, 222, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+.badge-file {
+  background: rgba(255, 159, 10, 0.2);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(255, 159, 10, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+.badge-color {
+  background: rgba(48, 209, 88, 0.2);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(48, 209, 88, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
 
-/* Enhanced glass effect */
+/* Liquid Glass Effect */
 .glass {
-  backdrop-filter: blur(50px) saturate(180%);
-  -webkit-backdrop-filter: blur(50px) saturate(180%);
+  backdrop-filter: blur(80px) saturate(200%) brightness(1.05);
+  -webkit-backdrop-filter: blur(80px) saturate(200%) brightness(1.05);
   background: var(--panel-bg);
+  background-image: var(--panel-bg-gradient);
   border-top: 1px solid var(--panel-border);
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 -20px 60px var(--shadow-color),
+    0 -1px 0 var(--border-glow),
+    var(--inner-shadow);
+}
+
+/* Glass card effect */
+.glass-card {
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  background: var(--card-bg);
+  background-image: var(--card-bg-gradient);
+  box-shadow:
+    0 4px 24px var(--shadow-color),
+    0 1px 0 var(--border-glow),
+    var(--inner-shadow);
+}
+
+.glass-card-selected {
+  background: var(--card-selected);
+  background-image: var(--card-selected-gradient);
+  box-shadow:
+    0 0 0 1.5px var(--accent),
+    0 0 30px var(--accent-glow),
+    0 8px 32px var(--shadow-color);
 }
 
 /* Truncate text */
@@ -168,16 +227,21 @@ body {
   transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Hover glow effect for cards */
+/* Hover glow effect for cards - Liquid Glass */
 .card-glow:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3),
-              0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px var(--shadow-color),
+    0 0 0 1px var(--border-glow),
+    var(--inner-shadow);
+  transform: translateY(-2px);
 }
 
-/* Selected card glow */
+/* Selected card glow - Liquid Glass */
 .card-selected-glow {
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5),
-              0 8px 32px rgba(59, 130, 246, 0.25);
+  box-shadow:
+    0 0 0 1.5px var(--accent),
+    0 0 40px var(--accent-glow),
+    0 12px 40px var(--shadow-color);
 }
 
 /* Button hover effects */

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, nativeImage, screen, Tray, Menu, systemPreferences, dialog } from 'electron'
+import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, nativeImage, screen, Tray, Menu, systemPreferences, dialog, shell } from 'electron'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
@@ -38,6 +38,7 @@ interface Settings {
   ignorePasswordManagers: boolean
   panelPosition: PanelPosition
   language: Language
+  pasteDirectly: boolean
 }
 
 const defaultSettings: Settings = {
@@ -51,7 +52,8 @@ const defaultSettings: Settings = {
   ignoreDuplicates: true,
   ignorePasswordManagers: true,
   panelPosition: 'bottom',
-  language: 'en'
+  language: 'en',
+  pasteDirectly: false // Default: copy only (user manually pastes)
 }
 
 const store = new Store<{ history: ClipboardItem[], settings: Settings }>({
@@ -66,6 +68,7 @@ let settingsWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let lastClipboardContent = ''
 let clipboardPollInterval: ReturnType<typeof setInterval> | null = null
+let previousApp = '' // Store the app that was active before opening clipboard panel
 
 function getSettings(): Settings {
   return store.get('settings') || defaultSettings
@@ -179,6 +182,8 @@ function updateTrayMenu() {
     { label: 'Show Clipboard (⌥Space)', click: () => toggleWindow() },
     { type: 'separator' },
     { label: 'Settings...', click: () => openSettings() },
+    { label: 'How to Use...', click: () => showHelp() },
+    { label: 'About...', click: () => showAbout() },
     { type: 'separator' },
     { label: 'Clear History', click: () => clearHistory() },
     { type: 'separator' },
@@ -196,7 +201,7 @@ function openSettings() {
 
   settingsWindow = new BrowserWindow({
     width: 480,
-    height: 600,
+    height: 700,
     title: 'Settings',
     resizable: false,
     minimizable: false,
@@ -234,6 +239,15 @@ function toggleWindow() {
   if (mainWindow.isVisible()) {
     mainWindow.hide()
   } else {
+    // Remember which app was active before opening the panel
+    try {
+      const script = 'tell application "System Events" to get name of first application process whose frontmost is true'
+      previousApp = execSync(`osascript -e '${script}'`, { encoding: 'utf8', timeout: 500 }).trim()
+      console.log('Previous app:', previousApp)
+    } catch (e) {
+      previousApp = ''
+    }
+
     const bounds = getWindowBounds()
     mainWindow.setBounds(bounds)
     mainWindow.show()
@@ -245,6 +259,72 @@ function toggleWindow() {
 function clearHistory() {
   store.set('history', [])
   mainWindow?.webContents.send('history-updated', [])
+}
+
+function showHelp() {
+  const iconPath = app.isPackaged
+    ? join(process.resourcesPath, 'assets', 'icon.png')
+    : join(__dirname, '..', 'assets', 'icon.png')
+
+  dialog.showMessageBox({
+    type: 'info',
+    icon: nativeImage.createFromPath(iconPath),
+    title: 'How to Use',
+    message: 'SimpleMacClipboardManager',
+    detail: `Keyboard Shortcuts:
+• ⌥Space - Open/close clipboard panel
+• ←→ or ↑↓ - Navigate between items
+• Enter - Copy to clipboard (or paste if enabled)
+• ⌘C - Copy to clipboard (always)
+• ⇧Enter - Paste directly as plain text
+• Space - Quick Look preview
+• ⌘1-9 - Quick paste items 1-9
+• ⌘⌫ - Delete selected item
+• Esc - Close panel
+
+Mouse Actions:
+• Click - Select item
+• Double-click - Copy (or paste if enabled)
+• Right-click - Copy (or paste if enabled)
+• Star icon - Pin/unpin item
+
+Tips:
+• Type to search clipboard history
+• Use filter buttons to show specific types
+• Pinned items stay at the top
+• Enable "Paste directly" in Settings to auto-paste`,
+    buttons: ['OK']
+  })
+}
+
+function showAbout() {
+  const iconPath = app.isPackaged
+    ? join(process.resourcesPath, 'assets', 'icon.png')
+    : join(__dirname, '..', 'assets', 'icon.png')
+
+  const version = app.getVersion()
+
+  dialog.showMessageBox({
+    type: 'info',
+    icon: nativeImage.createFromPath(iconPath),
+    title: 'About',
+    message: 'SimpleMacClipboardManager',
+    detail: `Version ${version}
+
+A free, lightweight clipboard manager for macOS.
+Keep your clipboard history organized and accessible.
+
+Created by @robbyczgw-cla`,
+    buttons: ['GitHub Repo', 'Author Profile', 'OK'],
+    defaultId: 2,
+    cancelId: 2
+  }).then(result => {
+    if (result.response === 0) {
+      shell.openExternal('https://github.com/robbyczgw-cla/SimpleMacClipboardManager')
+    } else if (result.response === 1) {
+      shell.openExternal('https://github.com/robbyczgw-cla')
+    }
+  })
 }
 
 function detectContentType(text: string): ClipboardItem['type'] {
@@ -468,6 +548,18 @@ app.whenReady().then(() => {
     lastClipboardContent = item.content
     lastImageDataUrl = item.type === 'image' ? item.content : ''
     mainWindow?.hide()
+
+    // Activate the previous app and simulate Cmd+V
+    setTimeout(() => {
+      try {
+        if (previousApp) {
+          // Activate the previous app first, then paste
+          execSync(`osascript -e 'tell application "${previousApp}" to activate' -e 'delay 0.1' -e 'tell application "System Events" to keystroke "v" using command down'`)
+        }
+      } catch (e) {
+        console.error('Failed to simulate paste:', e)
+      }
+    }, 100)
   })
 
   ipcMain.handle('paste-plain', (_, item: ClipboardItem) => {
@@ -476,6 +568,31 @@ app.whenReady().then(() => {
     clipboard.writeText(plainText)
     lastClipboardContent = plainText
     mainWindow?.hide()
+
+    // Activate the previous app and simulate Cmd+V
+    setTimeout(() => {
+      try {
+        if (previousApp) {
+          execSync(`osascript -e 'tell application "${previousApp}" to activate' -e 'delay 0.1' -e 'tell application "System Events" to keystroke "v" using command down'`)
+        }
+      } catch (e) {
+        console.error('Failed to simulate paste:', e)
+      }
+    }, 100)
+  })
+
+  ipcMain.handle('copy-only', (_, item: ClipboardItem) => {
+    // Copy to clipboard without auto-pasting
+    if (item.type === 'image' && item.content.startsWith('data:')) {
+      const image = nativeImage.createFromDataURL(item.content)
+      clipboard.writeImage(image)
+    } else {
+      clipboard.writeText(item.content)
+    }
+    lastClipboardContent = item.content
+    lastImageDataUrl = item.type === 'image' ? item.content : ''
+    mainWindow?.hide()
+    // No auto-paste - user will manually Cmd+V
   })
 
   ipcMain.handle('delete-item', (_, id: string) => {
