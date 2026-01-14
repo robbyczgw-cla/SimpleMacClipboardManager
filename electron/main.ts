@@ -66,7 +66,7 @@ function getSettings(): Settings {
 
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
-  const panelHeight = 300
+  const panelHeight = 340
 
   mainWindow = new BrowserWindow({
     width: width,
@@ -74,8 +74,9 @@ function createWindow() {
     x: 0,
     y: height - panelHeight,
     frame: false,
-    transparent: false,
-    backgroundColor: '#1e1e1e',
+    transparent: true,
+    vibrancy: 'under-window',
+    visualEffectState: 'active',
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
@@ -154,7 +155,7 @@ function updateTrayMenu() {
   if (!tray) return
 
   const menu = Menu.buildFromTemplate([
-    { label: 'Show Clipboard (⌘⇧V)', click: () => toggleWindow() },
+    { label: 'Show Clipboard (⌥Space)', click: () => toggleWindow() },
     { type: 'separator' },
     { label: 'Settings...', click: () => openSettings() },
     { type: 'separator' },
@@ -213,7 +214,7 @@ function toggleWindow() {
     mainWindow.hide()
   } else {
     const { height } = screen.getPrimaryDisplay().workAreaSize
-    mainWindow.setPosition(0, height - 300)
+    mainWindow.setPosition(0, height - 340)
     mainWindow.show()
     mainWindow.focus()
     mainWindow.webContents.send('panel-shown')
@@ -266,16 +267,59 @@ function startClipboardPolling() {
   console.log('Clipboard polling started with interval:', settings.pollingInterval)
 }
 
+let lastImageDataUrl = ''
+
 function pollClipboard() {
   try {
     const settings = getSettings()
     const text = clipboard.readText()
+    const image = clipboard.readImage()
 
+    // Check for image first
+    if (!image.isEmpty()) {
+      const imageDataUrl = image.toDataURL()
+
+      // Check if this is a new image (not the same as last one)
+      if (imageDataUrl !== lastImageDataUrl && imageDataUrl.length > 100) {
+        lastImageDataUrl = imageDataUrl
+
+        // Check if we should ignore password managers
+        if (settings.ignorePasswordManagers && isPasswordManagerActive()) {
+          return
+        }
+
+        const history = store.get('history')
+        const sourceApp = getFrontmostApp()
+
+        // Create thumbnail (resize to max 200px)
+        const thumbnail = image.resize({ width: 200, height: 200 }).toDataURL()
+
+        const item: ClipboardItem = {
+          id: uuidv4(),
+          type: 'image',
+          content: imageDataUrl,
+          thumbnail: thumbnail,
+          metadata: {
+            sourceApp: sourceApp || undefined
+          },
+          createdAt: Date.now(),
+          searchText: 'image screenshot',
+          pinned: false
+        }
+
+        const updated = [item, ...history].slice(0, settings.historyLimit)
+        store.set('history', updated)
+        mainWindow?.webContents.send('history-updated', updated)
+        return
+      }
+    }
+
+    // Check for text
     if (text && text !== lastClipboardContent) {
       // Check if we should ignore password managers
       if (settings.ignorePasswordManagers && isPasswordManagerActive()) {
         console.log('Ignored clipboard from password manager')
-        lastClipboardContent = text // Still update to avoid re-checking
+        lastClipboardContent = text
         return
       }
 
@@ -287,6 +331,7 @@ function pollClipboard() {
       }
 
       lastClipboardContent = text
+      lastImageDataUrl = '' // Clear image when text is copied
       const type = detectContentType(text)
       const sourceApp = getFrontmostApp()
 

@@ -45,10 +45,10 @@ export default function SearchBar({ value, onChange, itemCount, filterType, onFi
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Search clipboard history..."
-          className="w-full pl-10 pr-20 py-2.5 bg-white/5 border border-[var(--border-color)] rounded-lg
-                     text-[var(--text-primary)] placeholder-[var(--text-secondary)]
-                     focus:outline-none focus:border-blue-500/50 focus:bg-white/10
+          placeholder="Search clipboard..."
+          className="w-full pl-10 pr-20 py-2 bg-[var(--search-bg)] border border-[var(--border-color)] rounded-xl
+                     text-[var(--text-primary)] placeholder-[var(--text-tertiary)]
+                     focus:outline-none focus:border-[var(--accent)]/40 focus:ring-2 focus:ring-[var(--accent)]/10
                      transition-all text-sm"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] text-xs">

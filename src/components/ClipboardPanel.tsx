@@ -60,9 +60,9 @@ export default function ClipboardPanel({
   return (
     <div className="fixed inset-0 flex flex-col justify-end animate-slide-up">
       {/* Main panel */}
-      <div className="glass bg-[var(--panel-bg)] border-t border-[var(--border-color)]">
+      <div className="glass h-full flex flex-col">
         {/* Search bar */}
-        <div className="px-6 pt-4 pb-3">
+        <div className="px-5 pt-4 pb-3">
           <SearchBar
             value={searchQuery}
             onChange={onSearchChange}
@@ -76,11 +76,11 @@ export default function ClipboardPanel({
         <div
           ref={scrollRef}
           onWheel={handleWheel}
-          className="scroll-container flex gap-3 px-6 pb-4 overflow-x-auto overflow-y-hidden"
+          className="scroll-container flex-1 flex gap-3 px-5 pb-3 overflow-x-auto overflow-y-hidden items-start"
           style={{ scrollBehavior: 'smooth' }}
         >
           {items.length === 0 ? (
-            <div className="flex items-center justify-center w-full h-40 text-[var(--text-secondary)]">
+            <div className="flex items-center justify-center w-full h-full text-[var(--text-secondary)]">
               {searchQuery ? 'No matching items' : 'Clipboard history is empty'}
             </div>
           ) : (
@@ -104,14 +104,14 @@ export default function ClipboardPanel({
         </div>
 
         {/* Footer hint */}
-        <div className="px-6 py-2 border-t border-[var(--border-color)] flex items-center justify-between text-xs text-[var(--text-secondary)]">
-          <div className="flex gap-4">
-            <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">←</kbd> <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">→</kbd> Navigate</span>
-            <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">↵</kbd> Paste</span>
-            <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">⌘1-9</kbd> Quick paste</span>
-            <span><kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">esc</kbd> Close</span>
+        <div className="px-5 py-2.5 border-t border-[var(--border-color)] flex items-center justify-between text-[11px] text-[var(--text-tertiary)]">
+          <div className="flex gap-5">
+            <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[10px]">←</kbd> <kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[10px]">→</kbd> Navigate</span>
+            <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[10px]">↵</kbd> Paste</span>
+            <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[10px]">⌘1-9</kbd> Quick</span>
+            <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[10px]">esc</kbd> Close</span>
           </div>
-          <span>⌥Space to toggle</span>
+          <span className="opacity-70">⌥Space</span>
         </div>
       </div>
     </div>
