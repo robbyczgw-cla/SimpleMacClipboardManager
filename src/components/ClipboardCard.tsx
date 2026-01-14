@@ -130,15 +130,16 @@ export default function ClipboardCard({
         ${item.pinned ? 'ring-1 ring-yellow-400/40' : ''}
       `}
     >
-      {/* Pin button */}
+      {/* Pin button - visible on hover or when selected/pinned */}
       <button
         onClick={(e) => {
           e.stopPropagation()
           onTogglePin()
         }}
-        className={`absolute top-2 left-2 w-5 h-5 rounded-full
-                   flex items-center justify-center transition-opacity
-                   text-xs ${item.pinned ? 'text-yellow-400 opacity-100' : 'text-white/40 opacity-0 hover:opacity-100'}`}
+        className={`absolute top-2 left-2 w-6 h-6 rounded-full bg-black/30 hover:bg-yellow-500/80
+                   flex items-center justify-center transition-all
+                   text-sm ${item.pinned ? 'text-yellow-400 opacity-100' : 'text-white/70 hover:text-white opacity-0 group-hover:opacity-100'}
+                   ${isSelected ? 'opacity-100' : ''}`}
         title={item.pinned ? 'Unpin' : 'Pin'}
       >
         {item.pinned ? '★' : '☆'}
