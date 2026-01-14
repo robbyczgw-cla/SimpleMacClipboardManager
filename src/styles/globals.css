@@ -90,31 +90,21 @@ body {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Type badges with liquid glass effect */
+/* Type badges - solid colors for readability */
 .badge-text {
-  background: rgba(142, 142, 147, 0.2);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 2px 8px rgba(142, 142, 147, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: rgba(100, 100, 110, 0.85);
 }
 .badge-link {
-  background: rgba(10, 132, 255, 0.2);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 2px 12px rgba(10, 132, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: rgba(10, 132, 255, 0.85);
 }
 .badge-image {
-  background: rgba(175, 82, 222, 0.2);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 2px 12px rgba(175, 82, 222, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: rgba(155, 70, 195, 0.85);
 }
 .badge-file {
-  background: rgba(255, 159, 10, 0.2);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 2px 12px rgba(255, 159, 10, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: rgba(220, 140, 10, 0.9);
 }
 .badge-color {
-  background: rgba(48, 209, 88, 0.2);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 2px 12px rgba(48, 209, 88, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: rgba(40, 180, 75, 0.9);
 }
 
 /* Liquid Glass Effect */
