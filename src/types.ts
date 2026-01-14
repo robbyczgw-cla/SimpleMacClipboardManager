@@ -16,6 +16,7 @@ export interface ClipboardItem {
 }
 
 export type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
+export type Language = 'en' | 'es' | 'fr' | 'de' | 'zh'
 
 export interface Settings {
   historyLimit: number
@@ -28,6 +29,7 @@ export interface Settings {
   ignoreDuplicates: boolean
   ignorePasswordManagers: boolean
   panelPosition: PanelPosition
+  language: Language
 }
 
 export interface ElectronAPI {

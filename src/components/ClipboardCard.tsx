@@ -106,7 +106,7 @@ export default function ClipboardCard({
 
       default:
         return (
-          <p className="text-sm text-[var(--text-primary)] line-clamp-3 whitespace-pre-wrap break-words">
+          <p className="text-base text-[var(--text-primary)] line-clamp-3 whitespace-pre-wrap break-words">
             {item.content}
           </p>
         )
@@ -122,7 +122,7 @@ export default function ClipboardCard({
         card-animate card-glow relative flex-shrink-0 p-3 rounded-2xl cursor-pointer
         transition-all duration-200 ease-out
         border backdrop-blur-sm
-        ${isVertical ? 'w-full h-24' : 'w-48 h-36'}
+        ${isVertical ? 'w-full h-28' : 'w-52 h-44'}
         ${isSelected
           ? 'bg-[var(--card-selected)] border-blue-500/60 scale-[1.03] card-selected-glow'
           : 'bg-[var(--card-bg)] border-[var(--border-color)] hover:bg-[var(--card-hover)] hover:border-white/15 hover:scale-[1.01]'
@@ -159,7 +159,7 @@ export default function ClipboardCard({
       </button>
 
       {/* Content */}
-      <div className="h-20 overflow-hidden">
+      <div className="h-24 overflow-hidden">
         {renderContent()}
       </div>
 

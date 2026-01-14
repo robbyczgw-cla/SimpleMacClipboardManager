@@ -26,6 +26,7 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 - **Source App Tracking** - See which app content was copied from
 - **Keyboard First** - Navigate with arrow keys, paste with Enter
 - **Flexible Panel Position** - Choose where the panel appears (top, bottom, left, right)
+- **Multi-Language** - Available in English, Spanish, French, German, and Chinese
 - **Dark/Light Mode** - Automatically adapts to your system theme
 - **Live Settings** - Most settings apply instantly without restart
 - **Local Only** - All data stays on your Mac, no cloud sync
@@ -94,6 +95,7 @@ Access settings via menu bar → Settings:
 
 ### Appearance
 - **Panel position** - Where the clipboard panel appears (bottom, top, left, right)
+- **Language** - Interface language (English, Spanish, French, German, Chinese)
 
 ### Keyboard
 - **Global hotkey** - Customize the keyboard shortcut

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { getTranslations, languageNames, Language } from '../i18n/translations'
 
 type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
 
@@ -13,6 +14,7 @@ interface Settings {
   ignoreDuplicates: boolean
   ignorePasswordManagers: boolean
   panelPosition: PanelPosition
+  language: Language
 }
 
 const defaultSettings: Settings = {
@@ -25,7 +27,8 @@ const defaultSettings: Settings = {
   playSoundOnCopy: false,
   ignoreDuplicates: true,
   ignorePasswordManagers: true,
-  panelPosition: 'bottom'
+  panelPosition: 'bottom',
+  language: 'en'
 }
 
 export default function SettingsPage() {
@@ -35,6 +38,8 @@ export default function SettingsPage() {
   useEffect(() => {
     window.electronAPI.getSettings().then(setSettings)
   }, [])
+
+  const t = getTranslations(settings.language)
 
   const handleSave = async () => {
     await window.electronAPI.saveSettings(settings)
@@ -51,15 +56,15 @@ export default function SettingsPage() {
       {/* Drag region for title bar */}
       <div className="absolute top-0 left-0 right-0 h-8 app-drag" />
 
-      <h1 className="text-xl font-semibold mb-6">Settings</h1>
+      <h1 className="text-xl font-semibold mb-6">{t.settings}</h1>
 
       <div className="space-y-6 max-h-[320px] overflow-y-auto pr-2">
         {/* History Section */}
         <section className="bg-white/5 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-white/80 mb-4">History</h3>
+          <h3 className="text-sm font-medium text-white/80 mb-4">{t.history}</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <label className="text-sm text-white/70">Maximum items</label>
+              <label className="text-sm text-white/70">{t.maximumItems}</label>
               <select
                 value={settings.historyLimit}
                 onChange={e => handleChange('historyLimit', Number(e.target.value))}
@@ -74,8 +79,8 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm text-white/70">Ignore duplicates</label>
-                <p className="text-xs text-white/40">Don't save consecutive identical copies</p>
+                <label className="text-sm text-white/70">{t.ignoreDuplicates}</label>
+                <p className="text-xs text-white/40">{t.ignoreDuplicatesDesc}</p>
               </div>
               <input
                 type="checkbox"
@@ -86,8 +91,8 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm text-white/70">Clear history on quit</label>
-                <p className="text-xs text-white/40">Erase all data when closing</p>
+                <label className="text-sm text-white/70">{t.clearOnQuit}</label>
+                <p className="text-xs text-white/40">{t.clearOnQuitDesc}</p>
               </div>
               <input
                 type="checkbox"
@@ -101,24 +106,24 @@ export default function SettingsPage() {
 
         {/* Behavior Section */}
         <section className="bg-white/5 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-white/80 mb-4">Behavior</h3>
+          <h3 className="text-sm font-medium text-white/80 mb-4">{t.behavior}</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <label className="text-sm text-white/70">Polling interval</label>
+              <label className="text-sm text-white/70">{t.pollingInterval}</label>
               <select
                 value={settings.pollingInterval}
                 onChange={e => handleChange('pollingInterval', Number(e.target.value))}
                 className="bg-white/10 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
               >
-                <option value={250}>250ms (Fast)</option>
-                <option value={500}>500ms (Default)</option>
-                <option value={1000}>1000ms (Slow)</option>
+                <option value={250}>250ms ({t.fast})</option>
+                <option value={500}>500ms ({t.default})</option>
+                <option value={1000}>1000ms ({t.slow})</option>
               </select>
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm text-white/70">Launch at login</label>
-                <p className="text-xs text-white/40">Start automatically when you log in</p>
+                <label className="text-sm text-white/70">{t.launchAtLogin}</label>
+                <p className="text-xs text-white/40">{t.launchAtLoginDesc}</p>
               </div>
               <input
                 type="checkbox"
@@ -129,8 +134,8 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm text-white/70">Show in Dock</label>
-                <p className="text-xs text-white/40">Display app icon in the Dock</p>
+                <label className="text-sm text-white/70">{t.showInDock}</label>
+                <p className="text-xs text-white/40">{t.showInDockDesc}</p>
               </div>
               <input
                 type="checkbox"
@@ -141,8 +146,8 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm text-white/70">Play sound on copy</label>
-                <p className="text-xs text-white/40">Audio feedback when saving to history</p>
+                <label className="text-sm text-white/70">{t.playSoundOnCopy}</label>
+                <p className="text-xs text-white/40">{t.playSoundOnCopyDesc}</p>
               </div>
               <input
                 type="checkbox"
@@ -156,12 +161,12 @@ export default function SettingsPage() {
 
         {/* Privacy Section */}
         <section className="bg-white/5 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-white/80 mb-4">Privacy</h3>
+          <h3 className="text-sm font-medium text-white/80 mb-4">{t.privacy}</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm text-white/70">Ignore password managers</label>
-                <p className="text-xs text-white/40">Don't capture from 1Password, Bitwarden, etc.</p>
+                <label className="text-sm text-white/70">{t.ignorePasswordManagers}</label>
+                <p className="text-xs text-white/40">{t.ignorePasswordManagersDesc}</p>
               </div>
               <input
                 type="checkbox"
@@ -175,36 +180,53 @@ export default function SettingsPage() {
 
         {/* Appearance Section */}
         <section className="bg-white/5 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-white/80 mb-4">Appearance</h3>
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm text-white/70">Panel position</label>
-              <p className="text-xs text-white/40">Where the clipboard panel appears</p>
+          <h3 className="text-sm font-medium text-white/80 mb-4">{t.appearance}</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-white/70">{t.panelPosition}</label>
+                <p className="text-xs text-white/40">{t.panelPositionDesc}</p>
+              </div>
+              <select
+                value={settings.panelPosition}
+                onChange={e => handleChange('panelPosition', e.target.value as PanelPosition)}
+                className="bg-white/10 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="bottom">{t.bottom}</option>
+                <option value="top">{t.top}</option>
+                <option value="left">{t.left}</option>
+                <option value="right">{t.right}</option>
+              </select>
             </div>
-            <select
-              value={settings.panelPosition}
-              onChange={e => handleChange('panelPosition', e.target.value as PanelPosition)}
-              className="bg-white/10 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="bottom">Bottom (Default)</option>
-              <option value="top">Top</option>
-              <option value="left">Left</option>
-              <option value="right">Right</option>
-            </select>
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-white/70">{t.language}</label>
+                <p className="text-xs text-white/40">{t.languageDesc}</p>
+              </div>
+              <select
+                value={settings.language}
+                onChange={e => handleChange('language', e.target.value as Language)}
+                className="bg-white/10 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+              >
+                {(Object.keys(languageNames) as Language[]).map(lang => (
+                  <option key={lang} value={lang}>{languageNames[lang]}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </section>
 
         {/* Keyboard Section */}
         <section className="bg-white/5 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-white/80 mb-4">Keyboard</h3>
+          <h3 className="text-sm font-medium text-white/80 mb-4">{t.keyboard}</h3>
           <div className="flex items-center justify-between">
-            <label className="text-sm text-white/70">Global hotkey</label>
+            <label className="text-sm text-white/70">{t.globalHotkey}</label>
             <select
               value={settings.hotkey}
               onChange={e => handleChange('hotkey', e.target.value)}
               className="bg-white/10 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
             >
-              <option value="Option+Space">⌥Space (Default)</option>
+              <option value="Option+Space">⌥Space</option>
               <option value="CommandOrControl+Shift+V">⌘⇧V</option>
               <option value="CommandOrControl+Shift+C">⌘⇧C</option>
               <option value="CommandOrControl+Shift+H">⌘⇧H</option>
@@ -215,7 +237,7 @@ export default function SettingsPage() {
             </select>
           </div>
           <p className="text-xs text-white/40 mt-2">
-            Restart app after changing hotkey
+            {t.restartHotkey}
           </p>
         </section>
       </div>
@@ -223,13 +245,13 @@ export default function SettingsPage() {
       {/* Save Button */}
       <div className="mt-6 flex items-center justify-between">
         <span className={`text-sm transition-opacity ${saved ? 'text-green-400 opacity-100' : 'opacity-0'}`}>
-          ✓ Settings saved
+          ✓ {t.settingsSaved}
         </span>
         <button
           onClick={handleSave}
           className="px-5 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
         >
-          Save Settings
+          {t.saveSettings}
         </button>
       </div>
     </div>

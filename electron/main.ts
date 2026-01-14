@@ -24,6 +24,7 @@ interface ClipboardItem {
 }
 
 type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
+type Language = 'en' | 'es' | 'fr' | 'de' | 'zh'
 
 interface Settings {
   historyLimit: number
@@ -36,6 +37,7 @@ interface Settings {
   ignoreDuplicates: boolean
   ignorePasswordManagers: boolean
   panelPosition: PanelPosition
+  language: Language
 }
 
 const defaultSettings: Settings = {
@@ -48,7 +50,8 @@ const defaultSettings: Settings = {
   playSoundOnCopy: false,
   ignoreDuplicates: true,
   ignorePasswordManagers: true,
-  panelPosition: 'bottom'
+  panelPosition: 'bottom',
+  language: 'en'
 }
 
 const store = new Store<{ history: ClipboardItem[], settings: Settings }>({
@@ -71,7 +74,7 @@ function getSettings(): Settings {
 function getWindowBounds() {
   const { width, height } = screen.getPrimaryDisplay().size
   const settings = getSettings()
-  const panelSize = 340
+  const panelSize = 300
 
   switch (settings.panelPosition) {
     case 'top':

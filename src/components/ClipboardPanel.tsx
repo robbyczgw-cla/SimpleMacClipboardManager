@@ -90,7 +90,7 @@ export default function ClipboardPanel({
   return (
     <div className={`fixed inset-0 flex ${positionClasses[panelPosition]} ${animationClasses[panelPosition]}`}>
       {/* Main panel */}
-      <div className={`glass h-full flex ${isVertical ? 'flex-col' : 'flex-col'}`}>
+      <div className={`glass flex flex-col ${isVertical ? 'h-full' : ''}`}>
         {/* Search bar */}
         <div className={isVertical ? 'px-3 pt-4 pb-3' : 'px-5 pt-4 pb-3'}>
           <SearchBar
@@ -107,10 +107,10 @@ export default function ClipboardPanel({
         <div
           ref={scrollRef}
           onWheel={handleWheel}
-          className={`scroll-container flex-1 flex gap-3 ${
+          className={`scroll-container flex gap-3 ${
             isVertical
-              ? 'flex-col px-3 pb-3 overflow-y-auto overflow-x-hidden items-stretch'
-              : 'px-5 pb-3 overflow-x-auto overflow-y-hidden items-end'
+              ? 'flex-col flex-1 px-3 pb-3 overflow-y-auto overflow-x-hidden items-stretch'
+              : 'px-5 pb-3 overflow-x-auto overflow-y-hidden items-start'
           }`}
           style={{ scrollBehavior: 'smooth' }}
         >
@@ -141,21 +141,21 @@ export default function ClipboardPanel({
         </div>
 
         {/* Footer hint */}
-        <div className={`border-t border-[var(--border-color)] text-[11px] text-[var(--text-tertiary)] ${
-          isVertical ? 'px-3 py-2' : 'px-5 py-2.5 flex items-center justify-between'
+        <div className={`border-t border-[var(--border-color)] text-xs text-[var(--text-tertiary)] ${
+          isVertical ? 'px-3 py-2' : 'px-5 py-3 flex items-center justify-between'
         }`}>
           {isVertical ? (
             <div className="flex flex-col gap-1 text-center">
-              <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[10px]">↵</kbd> Paste</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">↵</kbd> Paste</span>
               <span className="opacity-70">⌥Space toggle</span>
             </div>
           ) : (
             <>
               <div className="flex gap-4">
-                <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[10px]">↵</kbd> Paste</span>
-                <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[10px]">⇧↵</kbd> Plain</span>
-                <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[10px]">Space</kbd> Preview</span>
-                <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[10px]">⌘1-9</kbd> Quick</span>
+                <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">↵</kbd> Paste</span>
+                <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">⇧↵</kbd> Plain</span>
+                <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">Space</kbd> Preview</span>
+                <span><kbd className="px-1.5 py-0.5 bg-[var(--kbd-bg)] rounded text-[11px]">⌘1-9</kbd> Quick</span>
               </div>
               <span className="opacity-70">⌥Space to toggle</span>
             </>
