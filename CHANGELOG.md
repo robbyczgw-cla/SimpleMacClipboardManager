@@ -5,6 +5,21 @@ All notable changes to SimpleMacClipboardManager will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-01-14
+
+### Added
+- **Drag & Drop** - Drag items from panel directly into other apps
+- **Merge Paste** - Shift+click to multi-select, then ⌘M to paste all together
+- **Markdown Preview** - Text with markdown is rendered with formatting in preview
+- **Text Transformations** - Copy as UPPERCASE, lowercase, Title Case, or trimmed whitespace
+- **URL Favicons** - Links show website favicon for quick identification
+- **Export/Import** - Backup and restore clipboard history as JSON
+- **Move to Top** - Pasted items automatically move to top of history
+
+### Changed
+- Preview modal now shows transformation buttons for text items
+- Footer shows multi-select hint when items are selected
+
 ## [0.7.1] - 2026-01-14
 
 ### Fixed

@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings),
   openSettings: () => ipcRenderer.invoke('open-settings'),
+  exportHistory: () => ipcRenderer.invoke('export-history'),
+  importHistory: () => ipcRenderer.invoke('import-history'),
 
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => {
     const handler = (_: any, history: ClipboardItem[]) => callback(history)

@@ -285,6 +285,49 @@ export default function SettingsPage() {
             {t.restartHotkey}
           </p>
         </section>
+
+        {/* Backup Section */}
+        <section className="bg-white/5 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-white/80 mb-4">Backup</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-white/70">Export History</label>
+                <p className="text-xs text-white/40">Save clipboard history as JSON file</p>
+              </div>
+              <button
+                onClick={async () => {
+                  const result = await window.electronAPI.exportHistory()
+                  if (result.success) {
+                    setSaved(true)
+                    setTimeout(() => setSaved(false), 2000)
+                  }
+                }}
+                className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 text-white rounded transition-colors"
+              >
+                Export
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-white/70">Import History</label>
+                <p className="text-xs text-white/40">Load clipboard history from JSON file</p>
+              </div>
+              <button
+                onClick={async () => {
+                  const result = await window.electronAPI.importHistory()
+                  if (result.success) {
+                    setSaved(true)
+                    setTimeout(() => setSaved(false), 2000)
+                  }
+                }}
+                className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 text-white rounded transition-colors"
+              >
+                Import
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
 
       {/* Save Button */}

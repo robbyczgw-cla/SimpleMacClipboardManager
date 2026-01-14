@@ -17,6 +17,8 @@ interface ClipboardItem {
     url?: string
     colorHex?: string
     sourceApp?: string
+    favicon?: string // Favicon URL for links
+    title?: string   // Page title for links
   }
   createdAt: number
   searchText: string
@@ -281,6 +283,25 @@ function clearHistory() {
   mainWindow?.webContents.send('history-updated', [])
 }
 
+// Move an item to the top of history (when pasted/copied from our app)
+function moveItemToTop(id: string) {
+  const history = store.get('history')
+  const itemIndex = history.findIndex(h => h.id === id)
+  if (itemIndex > 0) {
+    const item = history[itemIndex]
+    item.createdAt = Date.now() // Update timestamp
+    const updated = [item, ...history.filter(h => h.id !== id)]
+    // Re-sort: pinned items first, then by createdAt
+    updated.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1
+      if (!a.pinned && b.pinned) return 1
+      return b.createdAt - a.createdAt
+    })
+    store.set('history', updated)
+    mainWindow?.webContents.send('history-updated', updated)
+  }
+}
+
 function showHelp() {
   const iconPath = app.isPackaged
     ? join(process.resourcesPath, 'assets', 'logo.jpg')
@@ -353,6 +374,16 @@ function detectContentType(text: string): ClipboardItem['type'] {
   if (/^https?:\/\/\S+$/.test(trimmed)) return 'link'
   if (/^(\/|~\/|[A-Z]:\\)/.test(trimmed)) return 'file'
   return 'text'
+}
+
+// Get favicon URL for a domain using Google's service
+function getFaviconUrl(url: string): string {
+  try {
+    const domain = new URL(url).hostname
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+  } catch {
+    return ''
+  }
 }
 
 // Password manager app identifiers (backup check by app name)
@@ -500,7 +531,8 @@ function pollClipboard() {
         metadata: {
           url: type === 'link' ? text : undefined,
           colorHex: type === 'color' ? text : undefined,
-          sourceApp: sourceApp || undefined
+          sourceApp: sourceApp || undefined,
+          favicon: type === 'link' ? getFaviconUrl(text) : undefined
         },
         createdAt: Date.now(),
         searchText,
@@ -605,6 +637,10 @@ app.whenReady().then(() => {
     }
     lastClipboardContent = item.content
     lastImageDataUrl = item.type === 'image' ? item.content : ''
+
+    // Move item to top of history (update timestamp)
+    moveItemToTop(item.id)
+
     mainWindow?.hide()
 
     // Activate the previous app and simulate Cmd+V
@@ -625,6 +661,10 @@ app.whenReady().then(() => {
     const plainText = item.type === 'image' ? '[Image]' : item.content.replace(/<[^>]*>/g, '')
     clipboard.writeText(plainText)
     lastClipboardContent = plainText
+
+    // Move item to top of history (update timestamp)
+    moveItemToTop(item.id)
+
     mainWindow?.hide()
 
     // Activate the previous app and simulate Cmd+V
@@ -649,6 +689,10 @@ app.whenReady().then(() => {
     }
     lastClipboardContent = item.content
     lastImageDataUrl = item.type === 'image' ? item.content : ''
+
+    // Move item to top of history (update timestamp)
+    moveItemToTop(item.id)
+
     mainWindow?.hide()
     // No auto-paste - user will manually Cmd+V
   })
@@ -686,6 +730,61 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('open-settings', openSettings)
+
+  // Export history as JSON
+  ipcMain.handle('export-history', async () => {
+    const history = store.get('history')
+    const result = await dialog.showSaveDialog({
+      title: 'Export Clipboard History',
+      defaultPath: `clipboard-history-${new Date().toISOString().split('T')[0]}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+
+    if (!result.canceled && result.filePath) {
+      const fs = await import('fs')
+      fs.writeFileSync(result.filePath, JSON.stringify(history, null, 2))
+      return { success: true, path: result.filePath }
+    }
+    return { success: false }
+  })
+
+  // Import history from JSON
+  ipcMain.handle('import-history', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Import Clipboard History',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      properties: ['openFile']
+    })
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      try {
+        const fs = await import('fs')
+        const data = fs.readFileSync(result.filePaths[0], 'utf8')
+        const imported = JSON.parse(data) as ClipboardItem[]
+        const settings = getSettings()
+
+        // Merge with existing history, avoiding duplicates by content
+        const existing = store.get('history')
+        const existingContents = new Set(existing.map(h => h.content))
+        const newItems = imported.filter(item => !existingContents.has(item.content))
+
+        const merged = [...existing, ...newItems].slice(0, settings.historyLimit)
+        // Sort: pinned first, then by date
+        merged.sort((a, b) => {
+          if (a.pinned && !b.pinned) return -1
+          if (!a.pinned && b.pinned) return 1
+          return b.createdAt - a.createdAt
+        })
+
+        store.set('history', merged)
+        mainWindow?.webContents.send('history-updated', merged)
+        return { success: true, count: newItems.length }
+      } catch (e) {
+        return { success: false, error: 'Invalid JSON file' }
+      }
+    }
+    return { success: false }
+  })
 
   console.log('All handlers registered')
 })

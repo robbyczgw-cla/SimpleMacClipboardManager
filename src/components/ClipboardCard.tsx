@@ -3,7 +3,8 @@ import { ClipboardItem } from '../types'
 interface ClipboardCardProps {
   item: ClipboardItem
   isSelected: boolean
-  onClick: () => void
+  isMultiSelected?: boolean
+  onClick: (e: React.MouseEvent) => void
   onDoubleClick: () => void
   onDelete: () => void
   onCopy: () => void
@@ -45,6 +46,7 @@ function getTypeBadgeClass(type: ClipboardItem['type']): string {
 export default function ClipboardCard({
   item,
   isSelected,
+  isMultiSelected = false,
   onClick,
   onDoubleClick,
   onDelete,
@@ -55,6 +57,20 @@ export default function ClipboardCard({
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
     onCopy()
+  }
+
+  const handleDragStart = (e: React.DragEvent) => {
+    // Set drag data based on content type
+    if (item.type === 'image' && item.content.startsWith('data:')) {
+      // For images, we can't directly drag the data URL, so we use text fallback
+      e.dataTransfer.setData('text/plain', item.content)
+    } else if (item.type === 'link') {
+      e.dataTransfer.setData('text/uri-list', item.content)
+      e.dataTransfer.setData('text/plain', item.content)
+    } else {
+      e.dataTransfer.setData('text/plain', item.content)
+    }
+    e.dataTransfer.effectAllowed = 'copy'
   }
   const renderContent = () => {
     switch (item.type) {
@@ -85,8 +101,18 @@ export default function ClipboardCard({
       case 'link':
         return (
           <div className="space-y-1">
-            <div className="text-blue-400 text-sm truncate">
-              {item.content}
+            <div className="flex items-center gap-2">
+              {item.metadata.favicon && (
+                <img
+                  src={item.metadata.favicon}
+                  alt=""
+                  className="w-4 h-4 flex-shrink-0"
+                  onError={(e) => (e.currentTarget.style.display = 'none')}
+                />
+              )}
+              <div className="text-blue-400 text-sm truncate">
+                {item.content}
+              </div>
             </div>
             <div className="text-[var(--text-secondary)] text-xs truncate">
               {new URL(item.content).hostname}
@@ -115,9 +141,11 @@ export default function ClipboardCard({
 
   return (
     <div
+      draggable
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onContextMenu={handleContextMenu}
+      onDragStart={handleDragStart}
       className={`
         relative flex-shrink-0 p-3 rounded-2xl cursor-pointer
         transition-all duration-200 ease-out
@@ -128,6 +156,7 @@ export default function ClipboardCard({
           : 'glass-card card-glow border-[var(--border-color)] hover:bg-[var(--card-hover)] hover:border-white/20'
         }
         ${item.pinned ? 'ring-1 ring-yellow-400/40' : ''}
+        ${isMultiSelected ? 'ring-2 ring-green-400/60' : ''}
       `}
     >
       {/* Pin button - visible on hover or when selected/pinned */}

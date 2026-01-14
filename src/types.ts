@@ -9,6 +9,8 @@ export interface ClipboardItem {
     fileName?: string
     colorHex?: string
     sourceApp?: string
+    favicon?: string
+    title?: string
   }
   createdAt: number
   searchText: string
@@ -46,6 +48,8 @@ export interface ElectronAPI {
   getSettings: () => Promise<Settings>
   saveSettings: (settings: Settings) => Promise<void>
   openSettings: () => Promise<void>
+  exportHistory: () => Promise<{ success: boolean; path?: string }>
+  importHistory: () => Promise<{ success: boolean; count?: number; error?: string }>
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => () => void
   onPanelShown: (callback: () => void) => () => void
   onPanelHidden: (callback: () => void) => () => void

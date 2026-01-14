@@ -10,6 +10,7 @@ function App() {
   const [history, setHistory] = useState<ClipboardItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()) // Multi-select
   const [isVisible, setIsVisible] = useState(false)
   const [filterType, setFilterType] = useState<FilterType>('all')
   const [previewItem, setPreviewItem] = useState<ClipboardItem | null>(null)
@@ -79,6 +80,32 @@ function App() {
   const handleTogglePin = useCallback((id: string) => {
     window.electronAPI.togglePin(id)
   }, [])
+
+  // Toggle item in multi-select
+  const handleToggleSelect = useCallback((id: string, shiftKey: boolean) => {
+    if (shiftKey) {
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        if (next.has(id)) {
+          next.delete(id)
+        } else {
+          next.add(id)
+        }
+        return next
+      })
+    }
+  }, [])
+
+  // Merge paste: combine all selected items with newline separator
+  const handleMergePaste = useCallback(() => {
+    const selectedItems = filteredHistory.filter(item => selectedIds.has(item.id))
+    if (selectedItems.length > 0) {
+      const merged = selectedItems.map(item => item.content).join('\n\n')
+      navigator.clipboard.writeText(merged)
+      setSelectedIds(new Set())
+      window.electronAPI.hideWindow()
+    }
+  }, [filteredHistory, selectedIds])
 
   const isVertical = panelPosition === 'left' || panelPosition === 'right'
 
@@ -156,8 +183,24 @@ function App() {
           }
         }
         break
+      // Cmd+M = Merge paste selected items
+      case 'm':
+        if ((e.metaKey || e.ctrlKey) && selectedIds.size > 0) {
+          e.preventDefault()
+          handleMergePaste()
+        }
+        break
+      // A = Toggle current item in multi-select
+      case 'a':
+        if (e.metaKey || e.ctrlKey) {
+          e.preventDefault()
+          if (filteredHistory[selectedIndex]) {
+            handleToggleSelect(filteredHistory[selectedIndex].id, true)
+          }
+        }
+        break
     }
-  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleCopyOnly, handleDelete, previewItem, isVertical, pasteDirectly])
+  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleCopyOnly, handleDelete, previewItem, isVertical, pasteDirectly, selectedIds, handleMergePaste, handleToggleSelect])
 
   useEffect(() => {
     if (isSettingsPage) return
@@ -180,9 +223,11 @@ function App() {
       <ClipboardPanel
         items={filteredHistory}
         selectedIndex={selectedIndex}
+        selectedIds={selectedIds}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onSelect={setSelectedIndex}
+        onToggleSelect={handleToggleSelect}
         onPaste={pasteDirectly ? handlePaste : handleCopyOnly}
         onDelete={handleDelete}
         onTogglePin={handleTogglePin}

@@ -37,6 +37,12 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 - **Privacy Focused** - Ignores password managers automatically
 - **Lightweight** - Minimal resource usage, runs in menu bar
 - **Liquid Glass Design** - Modern macOS-inspired translucent UI with blur effects
+- **Drag & Drop** - Drag items directly into other apps
+- **Merge Paste** - Multi-select with Shift+click, then ⌘M to paste all together
+- **Markdown Preview** - Text with markdown renders beautifully in preview
+- **Text Transformations** - Copy as uppercase, lowercase, title case, or trimmed
+- **URL Favicons** - Links show website icons for quick identification
+- **Export/Import** - Backup and restore history as JSON
 
 ## Installation
 
@@ -84,6 +90,8 @@ npm run release
 | `⇧Enter` | Paste directly as plain text |
 | `Space` | Quick Look preview |
 | `⌘1-9` | Quick paste items 1-9 |
+| `⌘A` | Add current item to multi-selection |
+| `⌘M` | Merge paste all selected items |
 | `Esc` | Close panel / preview |
 | `⌘⌫` | Delete selected item |
 | Type | Search clipboard history |
@@ -93,8 +101,10 @@ npm run release
 | Action | Result |
 |--------|--------|
 | Click | Select item |
+| Shift+Click | Multi-select items |
 | Double-click | Copy to clipboard (or auto-paste if enabled) |
 | Right-click | Copy to clipboard (or auto-paste if enabled) |
+| Drag | Drag item into other apps |
 | Click star icon | Pin/unpin item |
 | Click × icon | Delete item |
 
