@@ -58,7 +58,7 @@ export default function SettingsPage() {
 
       <h1 className="text-xl font-semibold mb-6">{t.settings}</h1>
 
-      <div className="space-y-6 max-h-[320px] overflow-y-auto pr-2">
+      <div className="space-y-6 max-h-[480px] overflow-y-auto pr-2">
         {/* History Section */}
         <section className="bg-white/5 rounded-lg p-4">
           <h3 className="text-sm font-medium text-white/80 mb-4">{t.history}</h3>

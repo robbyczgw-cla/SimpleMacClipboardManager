@@ -196,7 +196,7 @@ function openSettings() {
 
   settingsWindow = new BrowserWindow({
     width: 480,
-    height: 420,
+    height: 600,
     title: 'Settings',
     resizable: false,
     minimizable: false,
