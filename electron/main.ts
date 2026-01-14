@@ -46,6 +46,7 @@ const store = new Store<{ history: ClipboardItem[], settings: Settings }>({
 })
 
 let mainWindow: BrowserWindow | null = null
+let settingsWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let lastClipboardContent = ''
 let clipboardPollInterval: ReturnType<typeof setInterval> | null = null
@@ -142,13 +143,43 @@ function updateTrayMenu() {
 }
 
 function openSettings() {
-  if (mainWindow) {
-    const { height } = screen.getPrimaryDisplay().workAreaSize
-    mainWindow.setPosition(0, height - 300)
-    mainWindow.show()
-    mainWindow.focus()
-    mainWindow.webContents.send('open-settings')
+  if (settingsWindow) {
+    settingsWindow.focus()
+    return
   }
+
+  settingsWindow = new BrowserWindow({
+    width: 480,
+    height: 420,
+    title: 'MacClipManager Settings',
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    show: false,
+    backgroundColor: '#2a2a2a',
+    titleBarStyle: 'hiddenInset',
+    webPreferences: {
+      preload: join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  })
+
+  const url = process.env.VITE_DEV_SERVER_URL
+  if (url) {
+    settingsWindow.loadURL(url + '#settings')
+  } else {
+    settingsWindow.loadFile(join(__dirname, '../dist/index.html'), { hash: 'settings' })
+  }
+
+  settingsWindow.once('ready-to-show', () => {
+    settingsWindow?.show()
+  })
+
+  settingsWindow.on('closed', () => {
+    settingsWindow = null
+  })
 }
 
 function toggleWindow() {

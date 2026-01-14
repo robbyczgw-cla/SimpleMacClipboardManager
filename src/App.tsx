@@ -1,16 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ClipboardItem } from './types'
 import ClipboardPanel from './components/ClipboardPanel'
-import SettingsModal from './components/SettingsModal'
+import SettingsPage from './components/SettingsPage'
 
 function App() {
   const [history, setHistory] = useState<ClipboardItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isVisible, setIsVisible] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+
+  // Check if we're in settings mode (hash routing)
+  const isSettingsPage = window.location.hash === '#settings'
 
   useEffect(() => {
+    if (isSettingsPage) return // Don't load clipboard stuff for settings page
+
     // Load initial history
     window.electronAPI.getHistory().then(setHistory)
 
@@ -23,19 +27,14 @@ function App() {
     })
     const unsubHidden = window.electronAPI.onPanelHidden(() => {
       setIsVisible(false)
-      setSettingsOpen(false)
-    })
-    const unsubSettings = window.electronAPI.onOpenSettings(() => {
-      setSettingsOpen(true)
     })
 
     return () => {
       unsubHistory()
       unsubShown()
       unsubHidden()
-      unsubSettings()
     }
-  }, [])
+  }, [isSettingsPage])
 
   const filteredHistory = searchQuery
     ? history.filter(item =>
@@ -52,13 +51,6 @@ function App() {
   }, [])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (settingsOpen) {
-      if (e.key === 'Escape') {
-        setSettingsOpen(false)
-      }
-      return
-    }
-
     if (!isVisible) return
 
     switch (e.key) {
@@ -88,41 +80,35 @@ function App() {
           }
         }
         break
-      case ',':
-        if (e.metaKey) {
-          e.preventDefault()
-          setSettingsOpen(true)
-        }
-        break
     }
-  }, [isVisible, settingsOpen, selectedIndex, filteredHistory, handlePaste, handleDelete])
+  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handleDelete])
 
   useEffect(() => {
+    if (isSettingsPage) return
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleKeyDown])
+  }, [handleKeyDown, isSettingsPage])
 
   // Reset selected index when search changes
   useEffect(() => {
     setSelectedIndex(0)
   }, [searchQuery])
 
+  // Render settings page if hash is #settings
+  if (isSettingsPage) {
+    return <SettingsPage />
+  }
+
   return (
-    <>
-      <ClipboardPanel
-        items={filteredHistory}
-        selectedIndex={selectedIndex}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onSelect={setSelectedIndex}
-        onPaste={handlePaste}
-        onDelete={handleDelete}
-      />
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
-    </>
+    <ClipboardPanel
+      items={filteredHistory}
+      selectedIndex={selectedIndex}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      onSelect={setSelectedIndex}
+      onPaste={handlePaste}
+      onDelete={handleDelete}
+    />
   )
 }
 

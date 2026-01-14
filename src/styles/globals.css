@@ -62,6 +62,15 @@ body {
   overflow: hidden;
 }
 
+/* Drag region for frameless windows */
+.app-drag {
+  -webkit-app-region: drag;
+}
+
+.app-drag * {
+  -webkit-app-region: no-drag;
+}
+
 /* Card animation */
 @keyframes cardAppear {
   from {
