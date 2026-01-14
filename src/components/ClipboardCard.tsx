@@ -132,7 +132,7 @@ export default function ClipboardCard({
 
       default:
         return (
-          <p className="text-base text-[var(--text-primary)] line-clamp-3 whitespace-pre-wrap break-words">
+          <p className="text-sm text-[var(--text-primary)] line-clamp-4 whitespace-pre-wrap break-words leading-snug">
             {item.content}
           </p>
         )
@@ -189,8 +189,8 @@ export default function ClipboardCard({
         ×
       </button>
 
-      {/* Content */}
-      <div className="h-24 overflow-hidden">
+      {/* Content - with top padding to avoid overlapping buttons */}
+      <div className="h-24 overflow-hidden mt-4">
         {renderContent()}
       </div>
 

@@ -1,6 +1,6 @@
 {
   "name": "simple-mac-clipboard-manager",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "type": "module",
   "description": "A lightweight clipboard manager for macOS",
   "main": "dist-electron/main.js",

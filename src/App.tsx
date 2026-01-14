@@ -36,6 +36,7 @@ function App() {
       setIsVisible(true)
       setSelectedIndex(0)
       setSearchQuery('')
+      setSelectedIds(new Set()) // Clear multi-select
       // Reload settings in case they changed
       window.electronAPI.getSettings().then(settings => {
         setPanelPosition(settings.panelPosition || 'bottom')
