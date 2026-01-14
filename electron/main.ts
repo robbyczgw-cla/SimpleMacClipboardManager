@@ -97,7 +97,7 @@ function getWindowBounds() {
   const { x: displayX, y: displayY, width, height } = display.bounds
 
   const settings = getSettings()
-  const panelSize = 300
+  const panelSize = 320
 
   switch (settings.panelPosition) {
     case 'top':

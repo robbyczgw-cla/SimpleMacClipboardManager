@@ -107,7 +107,7 @@ export default function ClipboardPanel({
       {/* Main panel */}
       <div className={`glass flex flex-col ${isVertical ? 'h-full' : ''}`}>
         {/* Search bar */}
-        <div className={isVertical ? 'px-3 pt-10 pb-1' : 'px-5 pt-10 pb-1'}>
+        <div className={isVertical ? 'px-3 pt-5 pb-2' : 'px-5 pt-5 pb-2'}>
           <SearchBar
             value={searchQuery}
             onChange={onSearchChange}
