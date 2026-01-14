@@ -5,6 +5,20 @@ All notable changes to SimpleMacClipboardManager will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-01-14
+
+### Changed
+- Panel height increased to 320px for better spacing
+- Footer text contrast improved for readability
+- Type badges now use solid opaque colors (85-90%) for clear white text
+- Card footer text uses medium font weight
+- Delete button now visible on hover and always on selected cards
+
+### Fixed
+- Card animation no longer re-triggers on selection change
+- Search bar no longer cut off at top
+- Reduced gap between search bar and cards
+
 ## [0.6.0] - 2026-01-14
 
 ### Added
