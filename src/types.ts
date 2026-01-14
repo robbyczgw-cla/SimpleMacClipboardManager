@@ -28,6 +28,7 @@ export interface Settings {
   playSoundOnCopy: boolean
   ignoreDuplicates: boolean
   ignorePasswordManagers: boolean
+  ignoredPasteboardTypes: string[] // Custom pasteboard types to ignore
   panelPosition: PanelPosition
   language: Language
   pasteDirectly: boolean // true = paste directly, false = copy only

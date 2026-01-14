@@ -5,6 +5,23 @@ All notable changes to SimpleMacClipboardManager will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-01-14
+
+### Added
+- **Virtualized List** - Uses react-window for smooth performance with 500+ items
+- **Multi-Monitor Support** - Panel appears on the display where your cursor is
+- **Ignored Pasteboard Types** - Maccy-style privacy using pasteboard type detection (TransientType, ConcealedType, etc.)
+- **Editable Ignore List** - Customize which pasteboard types to ignore in Settings > Privacy
+
+### Changed
+- Thumbnail compression improved (120px, JPEG 70%) for faster loading
+- Long text (10K+ chars) truncated in search index for performance
+- Error handling around clipboard reads prevents crashes
+- About/Help dialogs now show correct app logo
+
+### Fixed
+- Panel positioning on multi-monitor setups
+
 ## [0.5.0] - 2026-01-14
 
 ### Added

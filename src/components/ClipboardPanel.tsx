@@ -1,4 +1,5 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
+import { FixedSizeList as List } from 'react-window'
 import { ClipboardItem, PanelPosition } from '../types'
 import ClipboardCard from './ClipboardCard'
 import SearchBar from './SearchBar'
@@ -19,6 +20,10 @@ interface ClipboardPanelProps {
   panelPosition: PanelPosition
 }
 
+// Card dimensions
+const CARD_WIDTH = 208 + 12 // 52*4 = 208px width + 12px gap
+const VERTICAL_CARD_HEIGHT = 112 + 12 // Vertical mode card height + gap
+
 export default function ClipboardPanel({
   items,
   selectedIndex,
@@ -32,45 +37,25 @@ export default function ClipboardPanel({
   onFilterChange,
   panelPosition
 }: ClipboardPanelProps) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const selectedCardRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<List>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const isVertical = panelPosition === 'left' || panelPosition === 'right'
 
-  // Scroll selected card into view
+  // Scroll selected item into view
   useEffect(() => {
-    if (selectedCardRef.current && scrollRef.current) {
-      const container = scrollRef.current
-      const card = selectedCardRef.current
-      const containerRect = container.getBoundingClientRect()
-      const cardRect = card.getBoundingClientRect()
-
-      if (isVertical) {
-        if (cardRect.top < containerRect.top) {
-          container.scrollTop -= containerRect.top - cardRect.top + 20
-        } else if (cardRect.bottom > containerRect.bottom) {
-          container.scrollTop += cardRect.bottom - containerRect.bottom + 20
-        }
-      } else {
-        if (cardRect.left < containerRect.left) {
-          container.scrollLeft -= containerRect.left - cardRect.left + 20
-        } else if (cardRect.right > containerRect.right) {
-          container.scrollLeft += cardRect.right - containerRect.right + 20
-        }
-      }
+    if (listRef.current && items.length > 0) {
+      listRef.current.scrollToItem(selectedIndex, 'smart')
     }
-  }, [selectedIndex, isVertical])
+  }, [selectedIndex, items.length])
 
-  // Handle scroll with mouse wheel
-  const handleWheel = (e: React.WheelEvent) => {
-    if (scrollRef.current) {
-      e.preventDefault()
-      if (isVertical) {
-        scrollRef.current.scrollTop += e.deltaY
-      } else {
-        scrollRef.current.scrollLeft += e.deltaY
-      }
+  // Get container dimensions
+  const getContainerSize = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      return { width: rect.width, height: rect.height }
     }
-  }
+    return { width: 800, height: 200 }
+  }, [])
 
   // Position-based classes
   const positionClasses = {
@@ -86,6 +71,29 @@ export default function ClipboardPanel({
     left: 'animate-slide-right',
     right: 'animate-slide-left'
   }
+
+  // Render item for virtualized list
+  const renderItem = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const item = items[index]
+    if (!item) return null
+
+    return (
+      <div style={style} className={isVertical ? 'px-3' : 'py-0'}>
+        <ClipboardCard
+          item={item}
+          isSelected={index === selectedIndex}
+          onClick={() => onSelect(index)}
+          onDoubleClick={() => onPaste(item)}
+          onDelete={() => onDelete(item.id)}
+          onCopy={() => onPaste(item)}
+          onTogglePin={() => onTogglePin(item.id)}
+          isVertical={isVertical}
+        />
+      </div>
+    )
+  }, [items, selectedIndex, onSelect, onPaste, onDelete, onTogglePin, isVertical])
+
+  const containerSize = getContainerSize()
 
   return (
     <div className={`fixed inset-0 flex ${positionClasses[panelPosition]} ${animationClasses[panelPosition]}`}>
@@ -103,40 +111,39 @@ export default function ClipboardPanel({
           />
         </div>
 
-        {/* Clipboard items */}
+        {/* Clipboard items - Virtualized */}
         <div
-          ref={scrollRef}
-          onWheel={handleWheel}
-          className={`scroll-container flex gap-3 ${
-            isVertical
-              ? 'flex-col flex-1 px-3 pb-3 overflow-y-auto overflow-x-hidden items-stretch'
-              : 'px-5 pb-3 overflow-x-auto overflow-y-hidden items-start'
-          }`}
-          style={{ scrollBehavior: 'smooth' }}
+          ref={containerRef}
+          className={`flex-1 ${isVertical ? 'overflow-hidden' : 'px-5 pb-3'}`}
+          style={{ minHeight: isVertical ? 0 : 180 }}
         >
           {items.length === 0 ? (
             <div className="flex items-center justify-center w-full h-full text-[var(--text-secondary)]">
               {searchQuery ? 'No matching items' : 'Clipboard history is empty'}
             </div>
+          ) : isVertical ? (
+            <List
+              ref={listRef}
+              height={containerSize.height - 140} // Account for search bar and footer
+              itemCount={items.length}
+              itemSize={VERTICAL_CARD_HEIGHT}
+              width="100%"
+              className="scroll-container"
+            >
+              {renderItem}
+            </List>
           ) : (
-            items.map((item, index) => (
-              <div
-                key={item.id}
-                ref={index === selectedIndex ? selectedCardRef : null}
-                className={isVertical ? 'flex-shrink-0' : ''}
-              >
-                <ClipboardCard
-                  item={item}
-                  isSelected={index === selectedIndex}
-                  onClick={() => onSelect(index)}
-                  onDoubleClick={() => onPaste(item)}
-                  onDelete={() => onDelete(item.id)}
-                  onCopy={() => onPaste(item)}
-                  onTogglePin={() => onTogglePin(item.id)}
-                  isVertical={isVertical}
-                />
-              </div>
-            ))
+            <List
+              ref={listRef}
+              height={180}
+              itemCount={items.length}
+              itemSize={CARD_WIDTH}
+              width={containerSize.width - 40} // Account for padding
+              layout="horizontal"
+              className="scroll-container"
+            >
+              {renderItem}
+            </List>
           )}
         </div>
 
