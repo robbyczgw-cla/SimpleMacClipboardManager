@@ -61,8 +61,8 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/pastealt.git
-cd pastealt
+git clone https://github.com/robbyczgw-cla/SimpleMacClipboardManager.git
+cd SimpleMacClipboardManager
 
 # Install dependencies
 npm install
