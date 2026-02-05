@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportHistory: () => ipcRenderer.invoke('export-history'),
   importHistory: () => ipcRenderer.invoke('import-history'),
 
+  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => {
     const handler = (_: any, history: ClipboardItem[]) => callback(history)
     ipcRenderer.on('history-updated', handler)

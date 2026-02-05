@@ -19,6 +19,7 @@ interface Settings {
   language: Language
   pasteDirectly: boolean
   cardSize: CardSize
+  loadFavicons: boolean
 }
 
 const DEFAULT_IGNORED_TYPES = [
@@ -46,7 +47,8 @@ const defaultSettings: Settings = {
   panelPosition: 'bottom',
   language: 'en',
   pasteDirectly: false,
-  cardSize: 'medium'
+  cardSize: 'medium',
+  loadFavicons: false
 }
 
 export default function SettingsPage() {
@@ -202,6 +204,19 @@ export default function SettingsPage() {
                 type="checkbox"
                 checked={settings.ignorePasswordManagers}
                 onChange={e => handleChange('ignorePasswordManagers', e.target.checked)}
+                className="w-4 h-4 rounded accent-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-white/70">Load favicons for links</label>
+                <p className="text-xs text-white/40">If enabled, link domains may be requested from a favicon service.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.loadFavicons}
+                onChange={e => handleChange('loadFavicons', e.target.checked)}
                 className="w-4 h-4 rounded accent-blue-500"
               />
             </div>

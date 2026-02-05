@@ -17,7 +17,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@types/dompurify": "^3.0.5",
     "@types/react-window": "^1.8.8",
+    "dompurify": "^3.3.1",
     "electron-store": "^8.1.0",
     "framer-motion": "^10.16.0",
     "react": "^18.2.0",

@@ -44,6 +44,11 @@ interface Settings {
   language: Language
   pasteDirectly: boolean
   cardSize: CardSize
+  /**
+   * Privacy: if enabled, the app will fetch favicon images for link items.
+   * This can leak browsing domains to a third-party favicon service.
+   */
+  loadFavicons: boolean
 }
 
 // Default pasteboard types to ignore (matches Maccy's approach)
@@ -74,7 +79,8 @@ const defaultSettings: Settings = {
   panelPosition: 'bottom',
   language: 'en',
   pasteDirectly: false, // Default: copy only (user manually pastes)
-  cardSize: 'medium'
+  cardSize: 'medium',
+  loadFavicons: false
 }
 
 const store = new Store<{ history: ClipboardItem[], settings: Settings }>({
@@ -117,6 +123,25 @@ function getWindowBounds() {
   }
 }
 
+function configureExternalLinkHandling(win: BrowserWindow) {
+  // SECURITY: never allow renderer-created windows (window.open/target=_blank)
+  // to create new BrowserWindows. Open approved URLs externally instead.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    // Best-effort open externally; also enforce protocol allowlist.
+    try {
+      const parsed = new URL(url)
+      const allowed = ['http:', 'https:', 'mailto:']
+      if (allowed.includes(parsed.protocol)) {
+        shell.openExternal(url)
+      }
+    } catch {
+      // ignore invalid URLs
+    }
+
+    return { action: 'deny' }
+  })
+}
+
 function createWindow() {
   const bounds = getWindowBounds()
 
@@ -136,6 +161,8 @@ function createWindow() {
       nodeIntegration: false
     }
   })
+
+  configureExternalLinkHandling(mainWindow)
 
   const url = process.env.VITE_DEV_SERVER_URL
   if (url) {
@@ -241,6 +268,8 @@ function openSettings() {
       nodeIntegration: false
     }
   })
+
+  configureExternalLinkHandling(settingsWindow)
 
   const url = process.env.VITE_DEV_SERVER_URL
   if (url) {
@@ -535,7 +564,7 @@ function pollClipboard() {
           url: type === 'link' ? text : undefined,
           colorHex: type === 'color' ? text : undefined,
           sourceApp: sourceApp || undefined,
-          favicon: type === 'link' ? getFaviconUrl(text) : undefined
+          favicon: type === 'link' && settings.loadFavicons ? getFaviconUrl(text) : undefined
         },
         createdAt: Date.now(),
         searchText,
@@ -629,6 +658,19 @@ app.whenReady().then(() => {
 
   // IPC handlers
   ipcMain.handle('get-history', () => store.get('history'))
+
+  // SECURITY: renderer requests to open external links should go through main.
+  ipcMain.handle('open-external', async (_evt, url: string) => {
+    try {
+      const parsed = new URL(url)
+      const allowed = ['http:', 'https:', 'mailto:']
+      if (!allowed.includes(parsed.protocol)) return { success: false }
+      await shell.openExternal(url)
+      return { success: true }
+    } catch {
+      return { success: false }
+    }
+  })
 
   ipcMain.handle('paste-item', (_, item: ClipboardItem) => {
     if (item.type === 'image' && item.content.startsWith('data:')) {

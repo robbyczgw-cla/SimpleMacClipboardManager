@@ -36,6 +36,11 @@ export interface Settings {
   language: Language
   pasteDirectly: boolean // true = paste directly, false = copy only
   cardSize: CardSize // small, medium, large
+  /**
+   * Privacy: if enabled, the app will fetch favicon images for link items.
+   * This can leak browsing domains to a third-party favicon service.
+   */
+  loadFavicons: boolean
 }
 
 export interface ElectronAPI {
@@ -52,6 +57,7 @@ export interface ElectronAPI {
   openSettings: () => Promise<void>
   exportHistory: () => Promise<{ success: boolean; path?: string }>
   importHistory: () => Promise<{ success: boolean; count?: number; error?: string }>
+  openExternal: (url: string) => Promise<{ success: boolean }>
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => () => void
   onPanelShown: (callback: () => void) => () => void
   onPanelHidden: (callback: () => void) => () => void

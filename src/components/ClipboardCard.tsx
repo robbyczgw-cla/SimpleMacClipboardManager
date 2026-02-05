@@ -150,7 +150,7 @@ export default function ClipboardCard({
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                window.open(item.content, '_blank')
+                window.electronAPI.openExternal(item.content)
               }}
               className="mt-1 px-2 py-1 text-[10px] bg-blue-500/80 hover:bg-blue-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
             >

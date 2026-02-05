@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import DOMPurify from 'dompurify'
 import { ClipboardItem } from '../types'
 
 interface PreviewModalProps {
@@ -48,6 +49,16 @@ export default function PreviewModal({ item, onClose }: PreviewModalProps) {
   if (!item) return null
 
   const hasMarkdown = item.type === 'text' && isMarkdown(item.content)
+
+  // SECURITY: sanitize markdown-rendered HTML before injecting.
+  const sanitizedMarkdownHtml = useMemo(() => {
+    if (!hasMarkdown) return ''
+    const raw = renderMarkdown(item.content)
+    return DOMPurify.sanitize(raw, {
+      // Keep it simple: allow common inline tags, but strip scripts/handlers.
+      USE_PROFILES: { html: true }
+    })
+  }, [hasMarkdown, item.content])
 
   // Text transformation functions
   const transformText = (transform: 'upper' | 'lower' | 'title' | 'trim') => {
@@ -130,8 +141,11 @@ export default function PreviewModal({ item, onClose }: PreviewModalProps) {
             <div>
               <a
                 href={item.content}
-                target="_blank"
-                rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.preventDefault()
+                  window.electronAPI.openExternal(item.content)
+                  onClose()
+                }}
                 className="text-blue-400 hover:text-blue-300 break-all"
               >
                 {item.content}
@@ -145,7 +159,7 @@ export default function PreviewModal({ item, onClose }: PreviewModalProps) {
                 <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => {
-                      window.open(item.content, '_blank')
+                      window.electronAPI.openExternal(item.content)
                       onClose()
                     }}
                     className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
@@ -197,7 +211,17 @@ export default function PreviewModal({ item, onClose }: PreviewModalProps) {
               {hasMarkdown && showMarkdown ? (
                 <div
                   className="prose prose-invert prose-sm max-h-96 overflow-auto"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(item.content) }}
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement | null
+                    const anchor = target?.closest?.('a') as HTMLAnchorElement | null
+                    if (!anchor) return
+                    const href = anchor.getAttribute('href')
+                    if (!href) return
+                    // SECURITY: ensure links open in the default browser, not inside the app.
+                    e.preventDefault()
+                    window.electronAPI.openExternal(href)
+                  }}
+                  dangerouslySetInnerHTML={{ __html: sanitizedMarkdownHtml }}
                 />
               ) : (
                 <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-relaxed max-h-96 overflow-auto">

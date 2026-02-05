@@ -207,7 +207,7 @@ function App() {
       case 'o':
         if (filteredHistory[selectedIndex]?.type === 'link') {
           e.preventDefault()
-          window.open(filteredHistory[selectedIndex].content, '_blank')
+          window.electronAPI.openExternal(filteredHistory[selectedIndex].content)
           window.electronAPI.hideWindow()
         }
         break
