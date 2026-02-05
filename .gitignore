@@ -4,4 +4,5 @@ dist-electron
 release
 .DS_Store
 *.log
+*.tsbuildinfo
 CLAUDE.md

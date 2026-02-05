@@ -1,19 +1,6 @@
-const { contextBridge, ipcRenderer } = require('electron')
+import type { ClipboardItem, Settings } from '../common/types'
 
-interface ClipboardItem {
-  id: string
-  type: 'text' | 'image' | 'link' | 'file' | 'color'
-  content: string
-  thumbnail?: string
-  metadata: {
-    url?: string
-    colorHex?: string
-    sourceApp?: string
-  }
-  createdAt: number
-  searchText: string
-  pinned?: boolean
-}
+const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getHistory: (): Promise<ClipboardItem[]> => ipcRenderer.invoke('get-history'),
@@ -24,13 +11,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   togglePin: (id: string): Promise<void> => ipcRenderer.invoke('toggle-pin', id),
   clearHistory: (): Promise<void> => ipcRenderer.invoke('clear-history'),
   hideWindow: (): Promise<void> => ipcRenderer.invoke('hide-window'),
-  getSettings: () => ipcRenderer.invoke('get-settings'),
-  saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings),
+  getSettings: (): Promise<Settings> => ipcRenderer.invoke('get-settings'),
+  saveSettings: (settings: Settings) => ipcRenderer.invoke('save-settings', settings),
   openSettings: () => ipcRenderer.invoke('open-settings'),
   exportHistory: () => ipcRenderer.invoke('export-history'),
   importHistory: () => ipcRenderer.invoke('import-history'),
 
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+  getImageDragPath: (item: ClipboardItem) => ipcRenderer.invoke('get-image-drag-path', item),
 
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => {
     const handler = (_: any, history: ClipboardItem[]) => callback(history)

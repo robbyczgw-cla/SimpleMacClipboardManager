@@ -1,55 +1,14 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, nativeImage, screen, Tray, Menu, systemPreferences, dialog, shell } from 'electron'
 import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { execSync } from 'child_process'
+import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import Store from 'electron-store'
+import type { ClipboardItem, Settings } from '../common/types'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-
-interface ClipboardItem {
-  id: string
-  type: 'text' | 'image' | 'link' | 'file' | 'color'
-  content: string
-  thumbnail?: string
-  metadata: {
-    url?: string
-    colorHex?: string
-    sourceApp?: string
-    favicon?: string // Favicon URL for links
-    title?: string   // Page title for links
-  }
-  createdAt: number
-  searchText: string
-  pinned?: boolean
-}
-
-type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
-type Language = 'en' | 'es' | 'fr' | 'de' | 'zh'
-type CardSize = 'small' | 'medium' | 'large'
-
-interface Settings {
-  historyLimit: number
-  pollingInterval: number
-  launchAtLogin: boolean
-  clearOnQuit: boolean
-  showInDock: boolean
-  hotkey: string
-  playSoundOnCopy: boolean
-  ignoreDuplicates: boolean
-  ignorePasswordManagers: boolean
-  ignoredPasteboardTypes: string[] // Custom pasteboard types to ignore
-  panelPosition: PanelPosition
-  language: Language
-  pasteDirectly: boolean
-  cardSize: CardSize
-  /**
-   * Privacy: if enabled, the app will fetch favicon images for link items.
-   * This can leak browsing domains to a third-party favicon service.
-   */
-  loadFavicons: boolean
-}
 
 // Default pasteboard types to ignore (matches Maccy's approach)
 const DEFAULT_IGNORED_TYPES = [
@@ -80,7 +39,9 @@ const defaultSettings: Settings = {
   language: 'en',
   pasteDirectly: false, // Default: copy only (user manually pastes)
   cardSize: 'medium',
-  loadFavicons: false
+  loadFavicons: false,
+  // 8MB default; images larger than this will be downscaled before persisting.
+  maxImageBytes: 8 * 1024 * 1024
 }
 
 const store = new Store<{ history: ClipboardItem[], settings: Settings }>({
@@ -90,12 +51,133 @@ const store = new Store<{ history: ClipboardItem[], settings: Settings }>({
   }
 })
 
+// In-memory cache so we can debounce disk writes without losing consistency.
+let historyCache: ClipboardItem[] = store.get('history')
+let pendingHistorySave: ReturnType<typeof setTimeout> | null = null
+
+function getImagesDir(): string {
+  const dir = join(app.getPath('userData'), 'images')
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true })
+  }
+  return dir
+}
+
+function deleteImageFileForItem(item: ClipboardItem) {
+  if (item.type !== 'image') return
+  const imagePath = item.metadata.imagePath
+  if (!imagePath) return
+  try {
+    if (existsSync(imagePath)) unlinkSync(imagePath)
+  } catch (e) {
+    console.warn('Failed to delete image file:', imagePath, e)
+  }
+}
+
+function applyHistoryUpdate(next: ClipboardItem[]) {
+  // Cleanup removed image files (best-effort)
+  const previousPaths = new Set(
+    historyCache
+      .filter(i => i.type === 'image' && i.metadata.imagePath)
+      .map(i => i.metadata.imagePath as string)
+  )
+  const nextPaths = new Set(
+    next
+      .filter(i => i.type === 'image' && i.metadata.imagePath)
+      .map(i => i.metadata.imagePath as string)
+  )
+  for (const p of previousPaths) {
+    if (!nextPaths.has(p)) {
+      try {
+        if (existsSync(p)) unlinkSync(p)
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  historyCache = next
+  mainWindow?.webContents.send('history-updated', historyCache)
+
+  // PERFORMANCE: debounce disk writes to reduce electron-store churn.
+  if (pendingHistorySave) clearTimeout(pendingHistorySave)
+  pendingHistorySave = setTimeout(() => {
+    store.set('history', historyCache)
+    pendingHistorySave = null
+  }, 1000)
+}
+
+function persistImageToDisk(id: string, img: import('electron').NativeImage, settings: Settings) {
+  let toSave = img
+  let buffer = toSave.toPNG()
+  let mime = 'image/png'
+  let ext = 'png'
+
+  if (buffer.byteLength > settings.maxImageBytes) {
+    const size = toSave.getSize()
+    const targetWidth = Math.min(1600, size.width)
+    toSave = toSave.resize({ width: targetWidth })
+    buffer = toSave.toPNG()
+  }
+  if (buffer.byteLength > settings.maxImageBytes) {
+    buffer = toSave.toJPEG(80)
+    mime = 'image/jpeg'
+    ext = 'jpg'
+  }
+
+  const imagePath = join(getImagesDir(), `${id}.${ext}`)
+  writeFileSync(imagePath, buffer)
+  return { imagePath, fileUrl: pathToFileURL(imagePath).toString(), mime }
+}
+
+function migrateHistoryImagesToDisk() {
+  const settings = getSettings()
+  let changed = false
+
+  const migrated = historyCache.map(item => {
+    if (item.type !== 'image') return item
+    if (item.metadata.imagePath && existsSync(item.metadata.imagePath)) return item
+    if (!item.content.startsWith('data:')) return item
+
+    try {
+      const img = nativeImage.createFromDataURL(item.content)
+      if (img.isEmpty()) return item
+      const persisted = persistImageToDisk(item.id, img, settings)
+      changed = true
+      return {
+        ...item,
+        content: persisted.fileUrl,
+        metadata: {
+          ...item.metadata,
+          imagePath: persisted.imagePath,
+          imageMime: persisted.mime
+        }
+      }
+    } catch {
+      return item
+    }
+  })
+
+  if (changed) {
+    historyCache = migrated
+    store.set('history', historyCache)
+  }
+}
+
 let mainWindow: BrowserWindow | null = null
 let settingsWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let lastClipboardContent = ''
 let clipboardPollInterval: ReturnType<typeof setInterval> | null = null
 let previousApp = '' // Store the app that was active before opening clipboard panel
+
+function hideMainWindow() {
+  if (!mainWindow) return
+  if (!mainWindow.isVisible()) return
+  // Keep renderer state in sync (used for clearing search/selection, etc.)
+  mainWindow.webContents.send('panel-hidden')
+  mainWindow.hide()
+}
 
 function getSettings(): Settings {
   return store.get('settings') || defaultSettings
@@ -183,7 +265,7 @@ function createWindow() {
 
   mainWindow.on('blur', () => {
     if (mainWindow?.isVisible()) {
-      mainWindow.hide()
+      hideMainWindow()
     }
   })
 }
@@ -291,7 +373,7 @@ function toggleWindow() {
   if (!mainWindow) return
 
   if (mainWindow.isVisible()) {
-    mainWindow.hide()
+    hideMainWindow()
   } else {
     // Remember which app was active before opening the panel
     try {
@@ -311,26 +393,27 @@ function toggleWindow() {
 }
 
 function clearHistory() {
+  // Remove any persisted image files before clearing.
+  for (const item of historyCache) deleteImageFileForItem(item)
+  historyCache = []
   store.set('history', [])
   mainWindow?.webContents.send('history-updated', [])
 }
 
 // Move an item to the top of history (when pasted/copied from our app)
 function moveItemToTop(id: string) {
-  const history = store.get('history')
-  const itemIndex = history.findIndex(h => h.id === id)
+  const itemIndex = historyCache.findIndex(h => h.id === id)
   if (itemIndex > 0) {
-    const item = history[itemIndex]
+    const item = historyCache[itemIndex]
     item.createdAt = Date.now() // Update timestamp
-    const updated = [item, ...history.filter(h => h.id !== id)]
+    const updated = [item, ...historyCache.filter(h => h.id !== id)]
     // Re-sort: pinned items first, then by createdAt
     updated.sort((a, b) => {
       if (a.pinned && !b.pinned) return -1
       if (!a.pinned && b.pinned) return 1
       return b.createdAt - a.createdAt
     })
-    store.set('history', updated)
-    mainWindow?.webContents.send('history-updated', updated)
+    applyHistoryUpdate(updated)
   }
 }
 
@@ -490,6 +573,7 @@ function pollClipboard() {
 
     // Check for image first
     if (!image.isEmpty()) {
+      // Use data URL only for change detection; images are persisted to disk.
       const imageDataUrl = image.toDataURL()
 
       // Check if this is a new image (not the same as last one)
@@ -501,30 +585,59 @@ function pollClipboard() {
           return
         }
 
-        const history = store.get('history')
         const sourceApp = getFrontmostApp()
+        const id = uuidv4()
 
         // Create compressed thumbnail (smaller size, JPEG quality 70%)
-        const resized = image.resize({ width: 120, height: 120 })
-        const thumbnail = resized.toJPEG(70).toString('base64')
+        const thumbImg = image.resize({ width: 120, height: 120 })
+        const thumbnail = thumbImg.toJPEG(70).toString('base64')
         const thumbnailDataUrl = `data:image/jpeg;base64,${thumbnail}`
 
+        // PERFORMANCE/STORAGE: persist the full image to disk instead of electron-store.
+        let toSave = image
+        let buffer = toSave.toPNG()
+        let mime = 'image/png'
+        let ext = 'png'
+
+        if (buffer.byteLength > settings.maxImageBytes) {
+          // Downscale large images to reduce disk/storage impact.
+          const size = toSave.getSize()
+          const targetWidth = Math.min(1600, size.width)
+          toSave = toSave.resize({ width: targetWidth })
+          buffer = toSave.toPNG()
+        }
+        if (buffer.byteLength > settings.maxImageBytes) {
+          // As a last resort, switch to JPEG compression.
+          buffer = toSave.toJPEG(80)
+          mime = 'image/jpeg'
+          ext = 'jpg'
+        }
+
+        const imagePath = join(getImagesDir(), `${id}.${ext}`)
+        try {
+          writeFileSync(imagePath, buffer)
+        } catch (e) {
+          console.error('Failed to persist image file:', e)
+          return
+        }
+
         const item: ClipboardItem = {
-          id: uuidv4(),
+          id,
           type: 'image',
-          content: imageDataUrl,
+          content: pathToFileURL(imagePath).toString(),
           thumbnail: thumbnailDataUrl,
           metadata: {
-            sourceApp: sourceApp || undefined
+            sourceApp: sourceApp || undefined,
+            imagePath,
+            imageMime: mime
           },
           createdAt: Date.now(),
           searchText: 'image screenshot',
           pinned: false
         }
 
-        const updated = [item, ...history].slice(0, settings.historyLimit)
-        store.set('history', updated)
-        mainWindow?.webContents.send('history-updated', updated)
+        const updated = [item, ...historyCache].slice(0, settings.historyLimit)
+        applyHistoryUpdate(updated)
         return
       }
     }
@@ -539,8 +652,7 @@ function pollClipboard() {
       }
 
       // Check for duplicates (consecutive identical copies)
-      const history = store.get('history')
-      if (settings.ignoreDuplicates && history.length > 0 && history[0].content === text) {
+      if (settings.ignoreDuplicates && historyCache.length > 0 && historyCache[0].content === text) {
         lastClipboardContent = text
         return
       }
@@ -571,10 +683,9 @@ function pollClipboard() {
         pinned: false
       }
 
-      const filtered = history.filter(h => h.content !== text)
+      const filtered = historyCache.filter(h => h.content !== text)
       const updated = [item, ...filtered].slice(0, settings.historyLimit)
-      store.set('history', updated)
-      mainWindow?.webContents.send('history-updated', updated)
+      applyHistoryUpdate(updated)
     }
   } catch (e) {
     console.error('Clipboard poll error:', e)
@@ -616,7 +727,7 @@ app.whenReady().then(() => {
 
   // Check accessibility permissions (required for global hotkeys)
   if (process.platform === 'darwin') {
-    const isTrusted = systemPreferences.isTrustedAccessibilityClient({ prompt: false })
+    const isTrusted = systemPreferences.isTrustedAccessibilityClient(false)
     console.log('Accessibility permission:', isTrusted ? 'granted' : 'not granted')
 
     if (!isTrusted) {
@@ -631,12 +742,16 @@ app.whenReady().then(() => {
 
       if (result === 0) {
         // This will open System Preferences and prompt for permission
-        systemPreferences.isTrustedAccessibilityClient({ prompt: true })
+        systemPreferences.isTrustedAccessibilityClient(true)
       }
     }
   }
 
   const settings = getSettings()
+
+  // Migration: older versions stored full image data URLs in electron-store.
+  // Convert them to on-disk files to reduce storage and memory usage.
+  migrateHistoryImagesToDisk()
 
   // Apply initial settings
   if (!settings.showInDock) {
@@ -657,7 +772,7 @@ app.whenReady().then(() => {
   console.log('Hotkey registered:', registered)
 
   // IPC handlers
-  ipcMain.handle('get-history', () => store.get('history'))
+  ipcMain.handle('get-history', () => historyCache)
 
   // SECURITY: renderer requests to open external links should go through main.
   ipcMain.handle('open-external', async (_evt, url: string) => {
@@ -672,21 +787,55 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('get-image-drag-path', async (_evt, item: ClipboardItem) => {
+    try {
+      if (item.type !== 'image') return { success: false }
+
+      if (item.metadata.imagePath && existsSync(item.metadata.imagePath)) {
+        return {
+          success: true,
+          path: pathToFileURL(item.metadata.imagePath).toString(),
+          mime: item.metadata.imageMime || 'image/png',
+          filename: `clipboard-${item.id}`
+        }
+      }
+
+      if (item.content.startsWith('data:')) {
+        const img = nativeImage.createFromDataURL(item.content)
+        if (img.isEmpty()) return { success: false }
+        const settings = getSettings()
+        const persisted = persistImageToDisk(item.id, img, settings)
+        // Do not modify history here; this is just for drag-and-drop.
+        return {
+          success: true,
+          path: persisted.fileUrl,
+          mime: persisted.mime,
+          filename: `clipboard-${item.id}`
+        }
+      }
+
+      return { success: false }
+    } catch {
+      return { success: false }
+    }
+  })
   ipcMain.handle('paste-item', (_, item: ClipboardItem) => {
-    if (item.type === 'image' && item.content.startsWith('data:')) {
-      // For images, write the image to clipboard
-      const image = nativeImage.createFromDataURL(item.content)
-      clipboard.writeImage(image)
+    if (item.type === 'image') {
+      // For images, write the image to clipboard (file-based preferred).
+      const img = item.metadata.imagePath
+        ? nativeImage.createFromPath(item.metadata.imagePath)
+        : (item.content.startsWith('data:') ? nativeImage.createFromDataURL(item.content) : nativeImage.createEmpty())
+      if (!img.isEmpty()) clipboard.writeImage(img)
     } else {
       clipboard.writeText(item.content)
     }
     lastClipboardContent = item.content
-    lastImageDataUrl = item.type === 'image' ? item.content : ''
+    lastImageDataUrl = ''
 
     // Move item to top of history (update timestamp)
     moveItemToTop(item.id)
 
-    mainWindow?.hide()
+    hideMainWindow()
 
     // Activate the previous app and simulate Cmd+V
     setTimeout(() => {
@@ -702,15 +851,16 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('paste-plain', (_, item: ClipboardItem) => {
-    // Always paste as plain text, stripping any formatting
-    const plainText = item.type === 'image' ? '[Image]' : item.content.replace(/<[^>]*>/g, '')
+    // Paste as plain text. Most clipboard content we capture is already plain text,
+    // but we keep this handler for explicit "paste without formatting" requests.
+    const plainText = item.type === 'image' ? '[Image]' : item.content
     clipboard.writeText(plainText)
     lastClipboardContent = plainText
 
     // Move item to top of history (update timestamp)
     moveItemToTop(item.id)
 
-    mainWindow?.hide()
+    hideMainWindow()
 
     // Activate the previous app and simulate Cmd+V
     setTimeout(() => {
@@ -726,44 +876,48 @@ app.whenReady().then(() => {
 
   ipcMain.handle('copy-only', (_, item: ClipboardItem) => {
     // Copy to clipboard without auto-pasting
-    if (item.type === 'image' && item.content.startsWith('data:')) {
-      const image = nativeImage.createFromDataURL(item.content)
-      clipboard.writeImage(image)
+    if (item.type === 'image') {
+      const img = item.metadata.imagePath
+        ? nativeImage.createFromPath(item.metadata.imagePath)
+        : (item.content.startsWith('data:') ? nativeImage.createFromDataURL(item.content) : nativeImage.createEmpty())
+      if (!img.isEmpty()) clipboard.writeImage(img)
     } else {
       clipboard.writeText(item.content)
     }
     lastClipboardContent = item.content
-    lastImageDataUrl = item.type === 'image' ? item.content : ''
+    lastImageDataUrl = ''
 
     // Move item to top of history (update timestamp)
     moveItemToTop(item.id)
 
-    mainWindow?.hide()
+    hideMainWindow()
     // No auto-paste - user will manually Cmd+V
   })
 
   ipcMain.handle('delete-item', (_, id: string) => {
-    const history = store.get('history').filter(h => h.id !== id)
-    store.set('history', history)
-    mainWindow?.webContents.send('history-updated', history)
+    const toDelete = historyCache.find(h => h.id === id)
+    if (toDelete) deleteImageFileForItem(toDelete)
+
+    const history = historyCache.filter(h => h.id !== id)
+    applyHistoryUpdate(history)
   })
 
   ipcMain.handle('toggle-pin', (_, id: string) => {
-    const history = store.get('history').map(h =>
+    const history = historyCache.map(h =>
       h.id === id ? { ...h, pinned: !h.pinned } : h
     )
     // Sort: pinned items first, then by createdAt
     history.sort((a, b) => {
       if (a.pinned && !b.pinned) return -1
       if (!a.pinned && b.pinned) return 1
+      if (!a.pinned && !b.pinned) return b.createdAt - a.createdAt
       return b.createdAt - a.createdAt
     })
-    store.set('history', history)
-    mainWindow?.webContents.send('history-updated', history)
+    applyHistoryUpdate(history)
   })
 
   ipcMain.handle('clear-history', clearHistory)
-  ipcMain.handle('hide-window', () => mainWindow?.hide())
+  ipcMain.handle('hide-window', () => hideMainWindow())
 
   // Settings handlers
   ipcMain.handle('get-settings', () => getSettings())
@@ -778,7 +932,7 @@ app.whenReady().then(() => {
 
   // Export history as JSON
   ipcMain.handle('export-history', async () => {
-    const history = store.get('history')
+    const history = historyCache
     const result = await dialog.showSaveDialog({
       title: 'Export Clipboard History',
       defaultPath: `clipboard-history-${new Date().toISOString().split('T')[0]}.json`,
@@ -809,7 +963,7 @@ app.whenReady().then(() => {
         const settings = getSettings()
 
         // Merge with existing history, avoiding duplicates by content
-        const existing = store.get('history')
+        const existing = historyCache
         const existingContents = new Set(existing.map(h => h.content))
         const newItems = imported.filter(item => !existingContents.has(item.content))
 
@@ -821,8 +975,7 @@ app.whenReady().then(() => {
           return b.createdAt - a.createdAt
         })
 
-        store.set('history', merged)
-        mainWindow?.webContents.send('history-updated', merged)
+        applyHistoryUpdate(merged)
         return { success: true, count: newItems.length }
       } catch (e) {
         return { success: false, error: 'Invalid JSON file' }
@@ -839,6 +992,8 @@ app.on('will-quit', () => {
 
   // Clear history on quit if enabled
   if (settings.clearOnQuit) {
+    for (const item of historyCache) deleteImageFileForItem(item)
+    historyCache = []
     store.set('history', [])
     console.log('History cleared on quit')
   }

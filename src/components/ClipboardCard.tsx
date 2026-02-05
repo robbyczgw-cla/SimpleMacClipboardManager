@@ -73,9 +73,20 @@ export default function ClipboardCard({
 
   const handleDragStart = (e: React.DragEvent) => {
     // Set drag data based on content type
-    if (item.type === 'image' && item.content.startsWith('data:')) {
-      // For images, we can't directly drag the data URL, so we use text fallback
-      e.dataTransfer.setData('text/plain', item.content)
+    if (item.type === 'image') {
+      // Prefer file-based drag & drop so apps can receive an actual image file.
+      const fileUrl = item.metadata.imagePath ? item.content : ''
+      const mime = item.metadata.imageMime || 'image/png'
+      const ext = mime === 'image/jpeg' ? 'jpg' : 'png'
+      const filename = `clipboard-image.${ext}`
+
+      if (fileUrl) {
+        // DownloadURL format: <mime>:<filename>:<url>
+        e.dataTransfer.setData('DownloadURL', `${mime}:${filename}:${fileUrl}`)
+      } else {
+        // Fallback for legacy items.
+        e.dataTransfer.setData('text/plain', item.content)
+      }
     } else if (item.type === 'link') {
       e.dataTransfer.setData('text/uri-list', item.content)
       e.dataTransfer.setData('text/plain', item.content)

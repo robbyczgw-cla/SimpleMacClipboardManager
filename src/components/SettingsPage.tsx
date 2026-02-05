@@ -1,26 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getTranslations, languageNames, Language } from '../i18n/translations'
-
-type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
-type CardSize = 'small' | 'medium' | 'large'
-
-interface Settings {
-  historyLimit: number
-  pollingInterval: number
-  launchAtLogin: boolean
-  clearOnQuit: boolean
-  showInDock: boolean
-  hotkey: string
-  playSoundOnCopy: boolean
-  ignoreDuplicates: boolean
-  ignorePasswordManagers: boolean
-  ignoredPasteboardTypes: string[]
-  panelPosition: PanelPosition
-  language: Language
-  pasteDirectly: boolean
-  cardSize: CardSize
-  loadFavicons: boolean
-}
+import type { Settings, PanelPosition, CardSize } from '../types'
 
 const DEFAULT_IGNORED_TYPES = [
   'org.nspasteboard.TransientType',
@@ -48,7 +28,8 @@ const defaultSettings: Settings = {
   language: 'en',
   pasteDirectly: false,
   cardSize: 'medium',
-  loadFavicons: false
+  loadFavicons: false,
+  maxImageBytes: 8 * 1024 * 1024
 }
 
 export default function SettingsPage() {
@@ -95,6 +76,23 @@ export default function SettingsPage() {
                 <option value={500}>500</option>
                 <option value={1000}>1000</option>
                 <option value={2000}>2000</option>
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-white/70">Max image size</label>
+                <p className="text-xs text-white/40">Larger clipboard images will be downscaled before saving.</p>
+              </div>
+              <select
+                value={settings.maxImageBytes}
+                onChange={e => handleChange('maxImageBytes', Number(e.target.value))}
+                className="bg-white/10 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value={2 * 1024 * 1024}>2 MB</option>
+                <option value={4 * 1024 * 1024}>4 MB</option>
+                <option value={8 * 1024 * 1024}>8 MB (default)</option>
+                <option value={16 * 1024 * 1024}>16 MB</option>
               </select>
             </div>
             <div className="flex items-center justify-between">
