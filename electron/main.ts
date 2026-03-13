@@ -507,14 +507,27 @@ const PASSWORD_MANAGER_APPS = [
   'keeper', 'keychain', 'enpass', 'roboform', 'nordpass', 'proton pass'
 ]
 
+// Cache the frontmost app result to avoid spawning osascript on every poll cycle.
+// The cache TTL (2s) is short enough to stay accurate but long enough to cut
+// osascript invocations by ~4x at the default 500ms polling interval.
+let _frontmostAppCache = ''
+let _frontmostAppCacheTime = 0
+const FRONTMOST_APP_CACHE_TTL = 2000
+
 function getFrontmostApp(): string {
+  const now = Date.now()
+  if (now - _frontmostAppCacheTime < FRONTMOST_APP_CACHE_TTL) {
+    return _frontmostAppCache
+  }
   try {
     const script = 'tell application "System Events" to get name of first application process whose frontmost is true'
     const result = execSync(`osascript -e '${script}'`, { encoding: 'utf8', timeout: 500 })
-    return result.trim().toLowerCase()
+    _frontmostAppCache = result.trim().toLowerCase()
   } catch {
-    return ''
+    _frontmostAppCache = ''
   }
+  _frontmostAppCacheTime = now
+  return _frontmostAppCache
 }
 
 // Check if clipboard contains ignored pasteboard types (Maccy-style)
@@ -563,24 +576,79 @@ function startClipboardPolling() {
   console.log('Clipboard polling started with interval:', settings.pollingInterval)
 }
 
-let lastImageDataUrl = ''
+// Track last image by bitmap size + byte-length — far cheaper than toDataURL()
+// which performs a full PNG encode on every poll cycle.
+let lastImageBitmapKey = ''
+
+function getImageBitmapKey(image: Electron.NativeImage): string {
+  const size = image.getSize()
+  const bitmap = image.getBitmap()
+  return `${size.width}x${size.height}:${bitmap.byteLength}`
+}
 
 function pollClipboard() {
   try {
     const settings = getSettings()
+
+    // --- Text check first (very cheap: string comparison) ---
     const text = clipboard.readText()
+
+    if (text && text !== lastClipboardContent) {
+      // Text changed — check password manager once, then process
+      if (settings.ignorePasswordManagers && isPasswordManagerActive()) {
+        console.log('Ignored clipboard from password manager')
+        lastClipboardContent = text
+        return
+      }
+
+      if (settings.ignoreDuplicates && historyCache.length > 0 && historyCache[0].content === text) {
+        lastClipboardContent = text
+        return
+      }
+
+      lastClipboardContent = text
+      lastImageBitmapKey = '' // Clear image when text is copied
+      const type = detectContentType(text)
+      const sourceApp = getFrontmostApp()
+
+      const MAX_SEARCH_TEXT = 5000
+      const searchText = text.length > MAX_SEARCH_TEXT
+        ? text.slice(0, MAX_SEARCH_TEXT).toLowerCase()
+        : text.toLowerCase()
+
+      const item: ClipboardItem = {
+        id: uuidv4(),
+        type,
+        content: text,
+        metadata: {
+          url: type === 'link' ? text : undefined,
+          colorHex: type === 'color' ? text : undefined,
+          sourceApp: sourceApp || undefined,
+          favicon: type === 'link' && settings.loadFavicons ? getFaviconUrl(text) : undefined
+        },
+        createdAt: Date.now(),
+        searchText,
+        pinned: false
+      }
+
+      const filtered = historyCache.filter(h => h.content !== text)
+      const updated = [item, ...filtered].slice(0, settings.historyLimit)
+      applyHistoryUpdate(updated)
+      return
+    }
+
+    // --- Image check (only if text didn't change) ---
+    // clipboard.readImage() is expensive; we skip it when text already changed.
     const image = clipboard.readImage()
 
-    // Check for image first
     if (!image.isEmpty()) {
-      // Use data URL only for change detection; images are persisted to disk.
-      const imageDataUrl = image.toDataURL()
+      // Use bitmap dimensions + byte-length for change detection instead of
+      // toDataURL() which does a full PNG encode every cycle.
+      const bitmapKey = getImageBitmapKey(image)
 
-      // Check if this is a new image (not the same as last one)
-      if (imageDataUrl !== lastImageDataUrl && imageDataUrl.length > 100) {
-        lastImageDataUrl = imageDataUrl
+      if (bitmapKey !== lastImageBitmapKey && bitmapKey !== '0x0:0') {
+        lastImageBitmapKey = bitmapKey
 
-        // Check if we should ignore password managers
         if (settings.ignorePasswordManagers && isPasswordManagerActive()) {
           return
         }
@@ -588,7 +656,6 @@ function pollClipboard() {
         const sourceApp = getFrontmostApp()
         const id = uuidv4()
 
-        // Create compressed thumbnail (smaller size, JPEG quality 70%)
         const thumbImg = image.resize({ width: 120, height: 120 })
         const thumbnail = thumbImg.toJPEG(70).toString('base64')
         const thumbnailDataUrl = `data:image/jpeg;base64,${thumbnail}`
@@ -600,14 +667,12 @@ function pollClipboard() {
         let ext = 'png'
 
         if (buffer.byteLength > settings.maxImageBytes) {
-          // Downscale large images to reduce disk/storage impact.
           const size = toSave.getSize()
           const targetWidth = Math.min(1600, size.width)
           toSave = toSave.resize({ width: targetWidth })
           buffer = toSave.toPNG()
         }
         if (buffer.byteLength > settings.maxImageBytes) {
-          // As a last resort, switch to JPEG compression.
           buffer = toSave.toJPEG(80)
           mime = 'image/jpeg'
           ext = 'jpg'
@@ -638,58 +703,10 @@ function pollClipboard() {
 
         const updated = [item, ...historyCache].slice(0, settings.historyLimit)
         applyHistoryUpdate(updated)
-        return
       }
-    }
-
-    // Check for text
-    if (text && text !== lastClipboardContent) {
-      // Check if we should ignore password managers
-      if (settings.ignorePasswordManagers && isPasswordManagerActive()) {
-        console.log('Ignored clipboard from password manager')
-        lastClipboardContent = text
-        return
-      }
-
-      // Check for duplicates (consecutive identical copies)
-      if (settings.ignoreDuplicates && historyCache.length > 0 && historyCache[0].content === text) {
-        lastClipboardContent = text
-        return
-      }
-
-      lastClipboardContent = text
-      lastImageDataUrl = '' // Clear image when text is copied
-      const type = detectContentType(text)
-      const sourceApp = getFrontmostApp()
-
-      // Truncate searchText for very long content (keeps search fast)
-      const MAX_SEARCH_TEXT = 5000
-      const searchText = text.length > MAX_SEARCH_TEXT
-        ? text.slice(0, MAX_SEARCH_TEXT).toLowerCase()
-        : text.toLowerCase()
-
-      const item: ClipboardItem = {
-        id: uuidv4(),
-        type,
-        content: text, // Full content preserved for pasting
-        metadata: {
-          url: type === 'link' ? text : undefined,
-          colorHex: type === 'color' ? text : undefined,
-          sourceApp: sourceApp || undefined,
-          favicon: type === 'link' && settings.loadFavicons ? getFaviconUrl(text) : undefined
-        },
-        createdAt: Date.now(),
-        searchText,
-        pinned: false
-      }
-
-      const filtered = historyCache.filter(h => h.content !== text)
-      const updated = [item, ...filtered].slice(0, settings.historyLimit)
-      applyHistoryUpdate(updated)
     }
   } catch (e) {
     console.error('Clipboard poll error:', e)
-    // Continue polling despite error
   }
 }
 
@@ -830,7 +847,7 @@ app.whenReady().then(() => {
       clipboard.writeText(item.content)
     }
     lastClipboardContent = item.content
-    lastImageDataUrl = ''
+    lastImageBitmapKey = ''
 
     // Move item to top of history (update timestamp)
     moveItemToTop(item.id)
@@ -885,7 +902,7 @@ app.whenReady().then(() => {
       clipboard.writeText(item.content)
     }
     lastClipboardContent = item.content
-    lastImageDataUrl = ''
+    lastImageBitmapKey = ''
 
     // Move item to top of history (update timestamp)
     moveItemToTop(item.id)

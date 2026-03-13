@@ -5,6 +5,38 @@ All notable changes to SimpleMacClipboardManager will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2026-03-13
+
+### Fixed
+- **High Background CPU Usage** - Reduced idle CPU consumption significantly
+  - Cache frontmost app detection (osascript) with 2-second TTL instead of spawning a subprocess every poll cycle
+  - Check clipboard text before image — skip the expensive `readImage()` call when only text changed
+  - Replace full PNG encode (`toDataURL()`) with lightweight bitmap size comparison for image change detection
+
+## [0.11.0] - 2026-03-12
+
+### Changed
+- Shared TypeScript types between main and renderer processes
+- Disk-backed image storage instead of electron-store for better performance
+- Debounced history writes to reduce disk I/O
+- Improved plain-text paste and image drag behavior
+
+### Fixed
+- Panel-hidden event now fires reliably
+
+## [0.10.0] - 2026-03-11
+
+### Added
+- **Card Size Setting** - Choose between small, medium, or large card sizes
+
+### Security
+- Sanitize markdown preview to prevent XSS
+- Secure external link opening
+- Add favicon privacy toggle
+
+### Fixed
+- Incorrect repository name in Build from Source instructions
+
 ## [0.9.0] - 2026-01-14
 
 ### Added
