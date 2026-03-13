@@ -5,6 +5,29 @@ All notable changes to SimpleMacClipboardManager will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-03-13
+
+### Added
+- **Image Filter Tab** - Filter clipboard history to show only images
+- **Copy Sound** - `playSoundOnCopy` setting now plays a macOS system sound when new items are captured
+- **"Copied!" Toast** - Brief confirmation overlay when copying or pasting an item
+
+### Changed
+- **Instant Settings** - All settings now apply immediately on change, no Save button needed
+- **Faster Panel Animation** - Reduced from 350ms to 180ms for a snappier feel
+
+### Fixed
+- **Shell Injection** - Sanitize app names before passing to AppleScript
+- **URL Parse Crash** - Malformed URLs no longer crash the renderer
+- **Merge Paste Duplicates** - Merge paste no longer creates a ghost history entry
+- **History Lost on Quit** - Flush pending saves before exit
+
+### Performance
+- Cache `getSettings()` in memory instead of reading from disk every poll cycle
+- Reduce `backdrop-filter` blur from 80px to 12px (redundant with native vibrancy)
+- Remove unused `framer-motion` dependency (~45KB saved)
+- Deduplicate image compression logic
+
 ## [0.11.1] - 2026-03-13
 
 ### Fixed

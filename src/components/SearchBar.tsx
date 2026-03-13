@@ -16,6 +16,7 @@ const FILTER_OPTIONS: { type: FilterType; icon: string; label: string }[] = [
   { type: 'all', icon: '📋', label: 'All' },
   { type: 'text', icon: '📝', label: 'Text' },
   { type: 'link', icon: '🔗', label: 'Links' },
+  { type: 'image', icon: '🖼️', label: 'Images' },
   { type: 'color', icon: '🎨', label: 'Colors' },
   { type: 'file', icon: '📁', label: 'Files' },
 ]

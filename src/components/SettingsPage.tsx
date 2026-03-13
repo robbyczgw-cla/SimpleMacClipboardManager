@@ -42,14 +42,13 @@ export default function SettingsPage() {
 
   const t = getTranslations(settings.language)
 
-  const handleSave = async () => {
-    await window.electronAPI.saveSettings(settings)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
+  // Auto-save on every change — no manual Save button needed
   const handleChange = <K extends keyof Settings>(key: K, value: Settings[K]) => {
-    setSettings(prev => ({ ...prev, [key]: value }))
+    const next = { ...settings, [key]: value }
+    setSettings(next)
+    window.electronAPI.saveSettings(next)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1500)
   }
 
   return (
@@ -361,17 +360,11 @@ export default function SettingsPage() {
         </section>
       </div>
 
-      {/* Save Button */}
-      <div className="mt-6 flex items-center justify-between">
-        <span className={`text-sm transition-opacity ${saved ? 'text-green-400 opacity-100' : 'opacity-0'}`}>
+      {/* Auto-save indicator */}
+      <div className="mt-4 flex justify-center">
+        <span className={`text-sm transition-opacity duration-300 ${saved ? 'text-green-400 opacity-100' : 'opacity-0'}`}>
           ✓ {t.settingsSaved}
         </span>
-        <button
-          onClick={handleSave}
-          className="px-5 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-        >
-          {t.saveSettings}
-        </button>
       </div>
     </div>
   )
