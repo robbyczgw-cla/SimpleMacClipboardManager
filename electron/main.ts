@@ -460,7 +460,13 @@ function showAbout() {
 
   const version = app.getVersion()
 
-  dialog.showMessageBox({
+  // Show the main window briefly so the dialog has a parent and doesn't get
+  // lost behind other windows (which makes macOS appear to hang).
+  if (mainWindow && !mainWindow.isVisible()) {
+    mainWindow.showInactive()
+  }
+
+  dialog.showMessageBox(mainWindow!, {
     type: 'info',
     icon: nativeImage.createFromPath(iconPath),
     title: 'About',
