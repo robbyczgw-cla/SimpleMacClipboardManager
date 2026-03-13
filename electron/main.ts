@@ -742,26 +742,12 @@ function applySettings(settings: Settings) {
 app.whenReady().then(() => {
   console.log('App ready, creating window and tray...')
 
-  // Check accessibility permissions (required for global hotkeys)
+  // Accessibility permission is not actually required for Electron's globalShortcut
+  // API, so we just log the status without prompting. The dialog was shown on every
+  // fresh install/re-sign and confused users since hotkeys worked regardless.
   if (process.platform === 'darwin') {
     const isTrusted = systemPreferences.isTrustedAccessibilityClient(false)
     console.log('Accessibility permission:', isTrusted ? 'granted' : 'not granted')
-
-    if (!isTrusted) {
-      // Prompt user for accessibility permission
-      const result = dialog.showMessageBoxSync({
-        type: 'info',
-        title: 'Accessibility Permission Required',
-        message: 'SimpleMacClipboardManager needs Accessibility permission to use global hotkeys.',
-        detail: 'Click "Open System Preferences" to grant permission, then restart the app.',
-        buttons: ['Open System Preferences', 'Later']
-      })
-
-      if (result === 0) {
-        // This will open System Preferences and prompt for permission
-        systemPreferences.isTrustedAccessibilityClient(true)
-      }
-    }
   }
 
   const settings = getSettings()
