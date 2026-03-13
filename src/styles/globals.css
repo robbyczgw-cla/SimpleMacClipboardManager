@@ -109,8 +109,9 @@ body {
 
 /* Liquid Glass Effect */
 .glass {
-  backdrop-filter: blur(80px) saturate(200%) brightness(1.05);
-  -webkit-backdrop-filter: blur(80px) saturate(200%) brightness(1.05);
+  /* Light blur to complement native vibrancy — 80px was redundant and GPU-heavy */
+  backdrop-filter: blur(12px) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(180%) brightness(1.05);
   background: var(--panel-bg);
   background-image: var(--panel-bg-gradient);
   border-top: 1px solid var(--panel-border);

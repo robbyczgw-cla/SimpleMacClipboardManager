@@ -53,6 +53,7 @@ export interface ElectronAPI {
   pasteItem: (item: ClipboardItem) => Promise<void>
   pastePlain: (item: ClipboardItem) => Promise<void>
   copyOnly: (item: ClipboardItem) => Promise<void>
+  copyText: (text: string) => Promise<void>
   deleteItem: (id: string) => Promise<void>
   togglePin: (id: string) => Promise<void>
   clearHistory: () => Promise<void>

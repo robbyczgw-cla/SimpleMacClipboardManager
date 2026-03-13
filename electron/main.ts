@@ -179,8 +179,18 @@ function hideMainWindow() {
   mainWindow.hide()
 }
 
+// In-memory settings cache — avoids hitting disk (electron-store) on every
+// clipboard poll cycle. Invalidated only when settings are saved.
+let _settingsCache: Settings | null = null
+
 function getSettings(): Settings {
-  return store.get('settings') || defaultSettings
+  if (_settingsCache) return _settingsCache
+  _settingsCache = store.get('settings') || defaultSettings
+  return _settingsCache
+}
+
+function invalidateSettingsCache() {
+  _settingsCache = null
 }
 
 function getWindowBounds() {
@@ -497,6 +507,22 @@ function detectContentType(text: string): ClipboardItem['type'] {
   return 'text'
 }
 
+// Activate a previously focused app and simulate Cmd+V.
+// Sanitizes the app name to prevent shell/AppleScript injection.
+function activateAndPaste(appName: string) {
+  setTimeout(() => {
+    try {
+      if (appName) {
+        // Escape backslashes and double-quotes to prevent AppleScript injection
+        const safe = appName.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+        execSync(`osascript -e 'tell application "${safe}" to activate' -e 'delay 0.1' -e 'tell application "System Events" to keystroke "v" using command down'`)
+      }
+    } catch (e) {
+      console.error('Failed to simulate paste:', e)
+    }
+  }, 100)
+}
+
 // Get favicon URL for a domain using Google's service
 function getFaviconUrl(url: string): string {
   try {
@@ -666,27 +692,9 @@ function pollClipboard() {
         const thumbnail = thumbImg.toJPEG(70).toString('base64')
         const thumbnailDataUrl = `data:image/jpeg;base64,${thumbnail}`
 
-        // PERFORMANCE/STORAGE: persist the full image to disk instead of electron-store.
-        let toSave = image
-        let buffer = toSave.toPNG()
-        let mime = 'image/png'
-        let ext = 'png'
-
-        if (buffer.byteLength > settings.maxImageBytes) {
-          const size = toSave.getSize()
-          const targetWidth = Math.min(1600, size.width)
-          toSave = toSave.resize({ width: targetWidth })
-          buffer = toSave.toPNG()
-        }
-        if (buffer.byteLength > settings.maxImageBytes) {
-          buffer = toSave.toJPEG(80)
-          mime = 'image/jpeg'
-          ext = 'jpg'
-        }
-
-        const imagePath = join(getImagesDir(), `${id}.${ext}`)
+        let persisted: ReturnType<typeof persistImageToDisk>
         try {
-          writeFileSync(imagePath, buffer)
+          persisted = persistImageToDisk(id, image, settings)
         } catch (e) {
           console.error('Failed to persist image file:', e)
           return
@@ -695,12 +703,12 @@ function pollClipboard() {
         const item: ClipboardItem = {
           id,
           type: 'image',
-          content: pathToFileURL(imagePath).toString(),
+          content: persisted.fileUrl,
           thumbnail: thumbnailDataUrl,
           metadata: {
             sourceApp: sourceApp || undefined,
-            imagePath,
-            imageMime: mime
+            imagePath: persisted.imagePath,
+            imageMime: persisted.mime
           },
           createdAt: Date.now(),
           searchText: 'image screenshot',
@@ -847,16 +855,7 @@ app.whenReady().then(() => {
     hideMainWindow()
 
     // Activate the previous app and simulate Cmd+V
-    setTimeout(() => {
-      try {
-        if (previousApp) {
-          // Activate the previous app first, then paste
-          execSync(`osascript -e 'tell application "${previousApp}" to activate' -e 'delay 0.1' -e 'tell application "System Events" to keystroke "v" using command down'`)
-        }
-      } catch (e) {
-        console.error('Failed to simulate paste:', e)
-      }
-    }, 100)
+    activateAndPaste(previousApp)
   })
 
   ipcMain.handle('paste-plain', (_, item: ClipboardItem) => {
@@ -872,15 +871,7 @@ app.whenReady().then(() => {
     hideMainWindow()
 
     // Activate the previous app and simulate Cmd+V
-    setTimeout(() => {
-      try {
-        if (previousApp) {
-          execSync(`osascript -e 'tell application "${previousApp}" to activate' -e 'delay 0.1' -e 'tell application "System Events" to keystroke "v" using command down'`)
-        }
-      } catch (e) {
-        console.error('Failed to simulate paste:', e)
-      }
-    }, 100)
+    activateAndPaste(previousApp)
   })
 
   ipcMain.handle('copy-only', (_, item: ClipboardItem) => {
@@ -901,6 +892,13 @@ app.whenReady().then(() => {
 
     hideMainWindow()
     // No auto-paste - user will manually Cmd+V
+  })
+
+  // Copy text to clipboard from renderer (e.g. merge paste) while updating
+  // lastClipboardContent so the poller doesn't re-capture it as a new item.
+  ipcMain.handle('copy-text', (_, text: string) => {
+    clipboard.writeText(text)
+    lastClipboardContent = text
   })
 
   ipcMain.handle('delete-item', (_, id: string) => {
@@ -933,6 +931,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('save-settings', (_, newSettings: Settings) => {
     store.set('settings', newSettings)
+    invalidateSettingsCache()
     applySettings(newSettings)
     console.log('Settings saved:', newSettings)
   })
@@ -997,6 +996,13 @@ app.whenReady().then(() => {
 })
 
 app.on('will-quit', () => {
+  // Flush any pending debounced history write so data isn't lost on quit
+  if (pendingHistorySave) {
+    clearTimeout(pendingHistorySave)
+    pendingHistorySave = null
+    store.set('history', historyCache)
+  }
+
   const settings = getSettings()
 
   // Clear history on quit if enabled

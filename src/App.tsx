@@ -105,7 +105,7 @@ function App() {
     const selectedItems = filteredHistory.filter(item => selectedIds.has(item.id))
     if (selectedItems.length > 0) {
       const merged = selectedItems.map(item => item.content).join('\n\n')
-      navigator.clipboard.writeText(merged)
+      window.electronAPI.copyText(merged)
       setSelectedIds(new Set())
       window.electronAPI.hideWindow()
     }
