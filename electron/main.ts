@@ -1,7 +1,7 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, nativeImage, screen, Tray, Menu, systemPreferences, dialog, shell } from 'electron'
 import { join, dirname } from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
-import { execSync } from 'child_process'
+import { exec, execSync } from 'child_process'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import Store from 'electron-store'
@@ -93,6 +93,14 @@ function applyHistoryUpdate(next: ClipboardItem[]) {
       } catch {
         // ignore
       }
+    }
+  }
+
+  // Play sound when a new item is captured (list grew)
+  if (next.length > historyCache.length) {
+    const settings = getSettings()
+    if (settings.playSoundOnCopy) {
+      exec('afplay /System/Library/Sounds/Tink.aiff')
     }
   }
 

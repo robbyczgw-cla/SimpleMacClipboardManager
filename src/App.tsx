@@ -17,6 +17,7 @@ function App() {
   const [panelPosition, setPanelPosition] = useState<PanelPosition>('bottom')
   const [pasteDirectly, setPasteDirectly] = useState(false)
   const [cardSize, setCardSize] = useState<CardSize>('medium')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // Check if we're in settings mode (hash routing)
   const isSettingsPage = window.location.hash === '#settings'
@@ -65,17 +66,26 @@ function App() {
     return true
   })
 
-  const handlePaste = useCallback((item: ClipboardItem) => {
-    window.electronAPI.pasteItem(item)
+  // Brief flash before the window hides to confirm the action
+  const flashCopied = useCallback((id: string) => {
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 400)
   }, [])
+
+  const handlePaste = useCallback((item: ClipboardItem) => {
+    flashCopied(item.id)
+    window.electronAPI.pasteItem(item)
+  }, [flashCopied])
 
   const handlePastePlain = useCallback((item: ClipboardItem) => {
+    flashCopied(item.id)
     window.electronAPI.pastePlain(item)
-  }, [])
+  }, [flashCopied])
 
   const handleCopyOnly = useCallback((item: ClipboardItem) => {
+    flashCopied(item.id)
     window.electronAPI.copyOnly(item)
-  }, [])
+  }, [flashCopied])
 
   const handleDelete = useCallback((id: string) => {
     window.electronAPI.deleteItem(id)
@@ -249,6 +259,11 @@ function App() {
         panelPosition={panelPosition}
         cardSize={cardSize}
       />
+      {copiedId && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-lg bg-green-500/90 text-white text-sm font-medium shadow-lg animate-fade-in pointer-events-none">
+          Copied!
+        </div>
+      )}
       <PreviewModal
         item={previewItem}
         onClose={() => setPreviewItem(null)}
