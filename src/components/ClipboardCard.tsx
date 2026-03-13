@@ -155,7 +155,7 @@ export default function ClipboardCard({
               </div>
             </div>
             <div className="text-[var(--text-secondary)] text-xs truncate">
-              {new URL(item.content).hostname}
+              {(() => { try { return new URL(item.content).hostname } catch { return item.content } })()}
             </div>
             {/* Open in browser button */}
             <button

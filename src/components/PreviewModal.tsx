@@ -151,7 +151,7 @@ export default function PreviewModal({ item, onClose }: PreviewModalProps) {
                 {item.content}
               </a>
               <p className="text-sm text-[var(--text-secondary)] mt-2">
-                {new URL(item.content).hostname}
+                {(() => { try { return new URL(item.content).hostname } catch { return item.content } })()}
               </p>
               {/* Smart Actions for links */}
               <div className="mt-4 pt-4 border-t border-[var(--border-color)]">

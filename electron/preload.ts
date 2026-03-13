@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportHistory: () => ipcRenderer.invoke('export-history'),
   importHistory: () => ipcRenderer.invoke('import-history'),
 
+  copyText: (text: string): Promise<void> => ipcRenderer.invoke('copy-text', text),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   getImageDragPath: (item: ClipboardItem) => ipcRenderer.invoke('get-image-drag-path', item),
 
