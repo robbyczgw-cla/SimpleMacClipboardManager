@@ -1,10 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { ClipboardItem, PanelPosition, CardSize } from './types'
+import { getTranslations, Language } from './i18n/translations'
+import { fuzzyScore } from './utils/fuzzy'
+import { Icon } from './components/icons'
 import ClipboardPanel from './components/ClipboardPanel'
 import SettingsPage from './components/SettingsPage'
 import PreviewModal from './components/PreviewModal'
 
 type FilterType = 'all' | ClipboardItem['type']
+
+const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape'])
 
 function App() {
   const [history, setHistory] = useState<ClipboardItem[]>([])
@@ -17,7 +22,10 @@ function App() {
   const [panelPosition, setPanelPosition] = useState<PanelPosition>('bottom')
   const [pasteDirectly, setPasteDirectly] = useState(false)
   const [cardSize, setCardSize] = useState<CardSize>('medium')
+  const [language, setLanguage] = useState<Language>('en')
   const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const t = useMemo(() => getTranslations(language), [language])
 
   // Check if we're in settings mode (hash routing)
   const isSettingsPage = window.location.hash === '#settings'
@@ -25,13 +33,16 @@ function App() {
   useEffect(() => {
     if (isSettingsPage) return // Don't load clipboard stuff for settings page
 
-    // Load initial history and settings
-    window.electronAPI.getHistory().then(setHistory)
-    window.electronAPI.getSettings().then(settings => {
+    const applySettings = (settings: { panelPosition?: PanelPosition; pasteDirectly?: boolean; cardSize?: CardSize; language?: Language }) => {
       setPanelPosition(settings.panelPosition || 'bottom')
       setPasteDirectly(settings.pasteDirectly ?? false)
       setCardSize(settings.cardSize || 'medium')
-    })
+      setLanguage(settings.language || 'en')
+    }
+
+    // Load initial history and settings
+    window.electronAPI.getHistory().then(setHistory)
+    window.electronAPI.getSettings().then(applySettings)
 
     // Listen for updates
     const unsubHistory = window.electronAPI.onHistoryUpdated(setHistory)
@@ -40,12 +51,9 @@ function App() {
       setSelectedIndex(0)
       setSearchQuery('')
       setSelectedIds(new Set()) // Clear multi-select
-      // Reload settings in case they changed
-      window.electronAPI.getSettings().then(settings => {
-        setPanelPosition(settings.panelPosition || 'bottom')
-        setPasteDirectly(settings.pasteDirectly ?? false)
-        setCardSize(settings.cardSize || 'medium')
-      })
+      // The main process only pushes history while visible, so re-sync on open.
+      window.electronAPI.getHistory().then(setHistory)
+      window.electronAPI.getSettings().then(applySettings)
     })
     const unsubHidden = window.electronAPI.onPanelHidden(() => {
       setIsVisible(false)
@@ -58,18 +66,27 @@ function App() {
     }
   }, [isSettingsPage])
 
-  const filteredHistory = history.filter(item => {
-    // Filter by type
-    if (filterType !== 'all' && item.type !== filterType) return false
-    // Filter by search query
-    if (searchQuery && !item.searchText.includes(searchQuery.toLowerCase())) return false
-    return true
-  })
+  // PERFORMANCE: memoize so the filter (and the keydown callback that depends on
+  // it) is only recomputed when its inputs change — not on every render/keystroke.
+  // When a query is present, results are ranked by fuzzy relevance; the sort is
+  // stable, so equal scores keep their recency order.
+  const filteredHistory = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    const base = filterType === 'all' ? history : history.filter(item => item.type === filterType)
+    if (!q) return base
+    const scored: { item: ClipboardItem; score: number }[] = []
+    for (const item of base) {
+      const score = fuzzyScore(q, item.searchText)
+      if (score > 0) scored.push({ item, score })
+    }
+    scored.sort((a, b) => b.score - a.score)
+    return scored.map(s => s.item)
+  }, [history, filterType, searchQuery])
 
   // Brief flash before the window hides to confirm the action
   const flashCopied = useCallback((id: string) => {
     setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 400)
+    setTimeout(() => setCopiedId(null), 500)
   }, [])
 
   const handlePaste = useCallback((item: ClipboardItem) => {
@@ -110,9 +127,10 @@ function App() {
     }
   }, [])
 
-  // Merge paste: combine all selected items with newline separator
+  // Merge paste: combine selected text-like items with a blank-line separator.
+  // Images are skipped (their content is a file:// URL, meaningless as text).
   const handleMergePaste = useCallback(() => {
-    const selectedItems = filteredHistory.filter(item => selectedIds.has(item.id))
+    const selectedItems = filteredHistory.filter(item => selectedIds.has(item.id) && item.type !== 'image')
     if (selectedItems.length > 0) {
       const merged = selectedItems.map(item => item.content).join('\n\n')
       window.electronAPI.copyText(merged)
@@ -121,10 +139,19 @@ function App() {
     }
   }, [filteredHistory, selectedIds])
 
-  const isVertical = panelPosition === 'left' || panelPosition === 'right'
-
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isVisible) return
+
+    // While typing in the search field, let bare Space and letters (incl. 'o')
+    // reach the input. Only intercept navigation keys and modifier shortcuts.
+    const target = e.target as HTMLElement | null
+    const typing = !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+    if (typing) {
+      const isModCombo = e.metaKey || e.ctrlKey
+      // Cmd+A selects text in the field while typing, not multi-select.
+      if (isModCombo && (e.key === 'a' || e.key === 'A')) return
+      if (!NAV_KEYS.has(e.key) && !isModCombo) return
+    }
 
     switch (e.key) {
       case 'ArrowLeft':
@@ -204,7 +231,7 @@ function App() {
           handleMergePaste()
         }
         break
-      // A = Toggle current item in multi-select
+      // Cmd+A = Toggle current item in multi-select (when not typing in search)
       case 'a':
         if (e.metaKey || e.ctrlKey) {
           e.preventDefault()
@@ -213,7 +240,7 @@ function App() {
           }
         }
         break
-      // O = Open link in browser
+      // O = Open link in browser (bare key; guarded above so it never fires while typing)
       case 'o':
         if (filteredHistory[selectedIndex]?.type === 'link') {
           e.preventDefault()
@@ -222,7 +249,7 @@ function App() {
         }
         break
     }
-  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleCopyOnly, handleDelete, previewItem, isVertical, pasteDirectly, selectedIds, handleMergePaste, handleToggleSelect])
+  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleCopyOnly, handleDelete, previewItem, pasteDirectly, selectedIds, handleMergePaste, handleToggleSelect])
 
   useEffect(() => {
     if (isSettingsPage) return
@@ -230,10 +257,23 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown, isSettingsPage])
 
-  // Reset selected index when search changes
+  // Reset selection when the result set changes shape.
   useEffect(() => {
     setSelectedIndex(0)
-  }, [searchQuery])
+  }, [searchQuery, filterType])
+
+  // Keep selectedIndex in range when the filtered list shrinks (delete, etc.).
+  useEffect(() => {
+    setSelectedIndex(i => Math.min(i, Math.max(0, filteredHistory.length - 1)))
+  }, [filteredHistory.length])
+
+  // If the previewed item disappears from history (deleted/cleared elsewhere),
+  // close the preview so it never operates on stale data.
+  useEffect(() => {
+    if (previewItem && !history.some(h => h.id === previewItem.id)) {
+      setPreviewItem(null)
+    }
+  }, [history, previewItem])
 
   // Render settings page if hash is #settings
   if (isSettingsPage) {
@@ -258,15 +298,18 @@ function App() {
         onFilterChange={setFilterType}
         panelPosition={panelPosition}
         cardSize={cardSize}
+        t={t}
       />
       {copiedId && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-lg bg-green-500/90 text-white text-sm font-medium shadow-lg animate-fade-in pointer-events-none">
-          Copied!
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full glass border border-[var(--border-strong)] text-[var(--text-primary)] text-sm font-medium shadow-lg animate-fade-in pointer-events-none">
+          <Icon name="check" className="w-4 h-4 text-[var(--success)]" />
+          {t.copied}
         </div>
       )}
       <PreviewModal
         item={previewItem}
         onClose={() => setPreviewItem(null)}
+        t={t}
       />
     </>
   )

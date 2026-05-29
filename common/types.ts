@@ -10,6 +10,8 @@ export interface ClipboardItemMetadata {
   /** Absolute path to image on disk (when image storage is file-based). */
   imagePath?: string
   imageMime?: string
+  /** Cheap content signature (dimensions + byte length) used to dedupe images. */
+  imageKey?: string
 }
 
 export interface ClipboardItem {

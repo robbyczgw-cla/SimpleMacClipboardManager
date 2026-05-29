@@ -1,4 +1,8 @@
+import { memo } from 'react'
 import { ClipboardItem, CardSize } from '../types'
+import type { Translations } from '../i18n/translations'
+import { CARD_DIMENSIONS } from '../cardSizes'
+import { Icon, TypeIcon } from './icons'
 
 interface ClipboardCardProps {
   item: ClipboardItem
@@ -12,47 +16,39 @@ interface ClipboardCardProps {
   onPreview?: () => void
   isVertical?: boolean
   cardSize?: CardSize
+  t: Translations
 }
 
-// Card dimensions based on size
-const CARD_DIMENSIONS = {
-  small: { width: 160, height: 140, contentHeight: 72 },
-  medium: { width: 208, height: 176, contentHeight: 96 },
-  large: { width: 280, height: 200, contentHeight: 120 }
+// Subtle per-type accent applied to the type icon only (not a loud filled pill),
+// so content stays the loudest element on the card. Vivid values read well in
+// both light and dark themes.
+const TYPE_COLOR: Record<ClipboardItem['type'], string> = {
+  text: 'var(--text-secondary)',
+  link: '#0A84FF',
+  image: '#BF5AF2',
+  file: '#FF9F0A',
+  color: '#30D158'
 }
 
-function formatTimeAgo(timestamp: number): string {
+function formatTimeAgo(timestamp: number, t: Translations): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000)
-
-  if (seconds < 60) return 'Just now'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-  return `${Math.floor(seconds / 86400)}d ago`
+  if (seconds < 60) return t.justNow
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}${t.minutesAgo}`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}${t.hoursAgo}`
+  return `${Math.floor(seconds / 86400)}${t.daysAgo}`
 }
 
-function getTypeIcon(type: ClipboardItem['type']): string {
+function typeLabel(type: ClipboardItem['type'], t: Translations): string {
   switch (type) {
-    case 'text': return '📝'
-    case 'link': return '🔗'
-    case 'image': return '🖼️'
-    case 'file': return '📁'
-    case 'color': return '🎨'
-    default: return '📋'
+    case 'text': return t.text
+    case 'link': return t.link
+    case 'image': return t.image
+    case 'file': return t.file
+    case 'color': return t.color
   }
 }
 
-function getTypeBadgeClass(type: ClipboardItem['type']): string {
-  switch (type) {
-    case 'text': return 'badge-text'
-    case 'link': return 'badge-link'
-    case 'image': return 'badge-image'
-    case 'file': return 'badge-file'
-    case 'color': return 'badge-color'
-    default: return 'badge-text'
-  }
-}
-
-export default function ClipboardCard({
+function ClipboardCard({
   item,
   isSelected,
   isMultiSelected = false,
@@ -63,7 +59,8 @@ export default function ClipboardCard({
   onTogglePin,
   onPreview,
   isVertical = false,
-  cardSize = 'medium'
+  cardSize = 'medium',
+  t
 }: ClipboardCardProps) {
   const dimensions = CARD_DIMENSIONS[cardSize]
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -72,19 +69,14 @@ export default function ClipboardCard({
   }
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Set drag data based on content type
     if (item.type === 'image') {
-      // Prefer file-based drag & drop so apps can receive an actual image file.
       const fileUrl = item.metadata.imagePath ? item.content : ''
       const mime = item.metadata.imageMime || 'image/png'
       const ext = mime === 'image/jpeg' ? 'jpg' : 'png'
       const filename = `clipboard-image.${ext}`
-
       if (fileUrl) {
-        // DownloadURL format: <mime>:<filename>:<url>
         e.dataTransfer.setData('DownloadURL', `${mime}:${filename}:${fileUrl}`)
       } else {
-        // Fallback for legacy items.
         e.dataTransfer.setData('text/plain', item.content)
       }
     } else if (item.type === 'link') {
@@ -95,10 +87,15 @@ export default function ClipboardCard({
     }
     e.dataTransfer.effectAllowed = 'copy'
   }
-  // Dynamic line clamp based on card size
+
   const lineClampClass = cardSize === 'small' ? 'line-clamp-3' : cardSize === 'large' ? 'line-clamp-6' : 'line-clamp-4'
   const imageHeight = cardSize === 'small' ? 'h-14' : cardSize === 'large' ? 'h-24' : 'h-20'
   const colorBoxSize = cardSize === 'small' ? 'w-12 h-12' : cardSize === 'large' ? 'w-20 h-20' : 'w-16 h-16'
+
+  // Contextual action (open link / preview image), shown on hover OR when selected
+  // so keyboard users get the affordance too. Positioned absolutely above the
+  // footer so it never reflows the card content.
+  const actionVisibility = isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
 
   const renderContent = () => {
     switch (item.type) {
@@ -107,21 +104,10 @@ export default function ClipboardCard({
           <div className={`w-full ${imageHeight} flex items-center justify-center overflow-hidden rounded relative`}>
             <img
               src={item.thumbnail || item.content}
-              alt="Clipboard image"
+              alt={t.image}
               className="max-w-full max-h-full object-contain"
+              draggable={false}
             />
-            {/* Preview button for images */}
-            {onPreview && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onPreview()
-                }}
-                className="absolute bottom-1 right-1 px-2 py-1 text-[10px] bg-black/60 hover:bg-black/80 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                Preview
-              </button>
-            )}
           </div>
         )
 
@@ -129,7 +115,7 @@ export default function ClipboardCard({
         return (
           <div className="flex flex-col items-center gap-2">
             <div
-              className={`${colorBoxSize} rounded-lg border border-white/20 shadow-inner`}
+              className={`${colorBoxSize} rounded-lg border border-[var(--border-strong)] shadow-inner`}
               style={{ backgroundColor: item.metadata.colorHex || item.content }}
             />
             <code className="text-xs text-[var(--text-secondary)] font-mono">
@@ -150,31 +136,21 @@ export default function ClipboardCard({
                   onError={(e) => (e.currentTarget.style.display = 'none')}
                 />
               )}
-              <div className="text-blue-400 text-sm truncate">
+              <div className="text-[var(--accent)] text-sm truncate">
                 {item.content}
               </div>
             </div>
-            <div className="text-[var(--text-secondary)] text-xs truncate">
+            <div className="text-[var(--text-tertiary)] text-xs truncate">
               {(() => { try { return new URL(item.content).hostname } catch { return item.content } })()}
             </div>
-            {/* Open in browser button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                window.electronAPI.openExternal(item.content)
-              }}
-              className="mt-1 px-2 py-1 text-[10px] bg-blue-500/80 hover:bg-blue-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              Open in Browser
-            </button>
           </div>
         )
 
       case 'file':
         return (
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">📄</span>
-            <span className="text-sm truncate text-[var(--text-secondary)]">
+          <div className="flex items-center gap-2 text-[var(--text-secondary)]">
+            <Icon name="file" className="w-6 h-6 flex-shrink-0" />
+            <span className="text-sm truncate">
               {item.content.split('/').pop()}
             </span>
           </div>
@@ -196,18 +172,21 @@ export default function ClipboardCard({
       onDoubleClick={onDoubleClick}
       onContextMenu={handleContextMenu}
       onDragStart={handleDragStart}
+      role="option"
+      aria-selected={isSelected}
+      aria-label={`${typeLabel(item.type, t)}: ${item.searchText.slice(0, 80)}`}
       style={isVertical ? { height: dimensions.height - 32 } : { width: dimensions.width, height: dimensions.height }}
       className={`
         relative flex-shrink-0 p-3 rounded-2xl cursor-pointer
-        transition-all duration-200 ease-out
+        transition-[background,border-color,box-shadow] duration-150 ease-out
         border group
         ${isVertical ? 'w-full' : ''}
         ${isSelected
-          ? 'glass-card-selected border-blue-500/40 scale-[1.02]'
-          : 'glass-card card-glow border-[var(--border-color)] hover:bg-[var(--card-hover)] hover:border-white/20'
+          ? 'glass-card-selected border-[var(--accent)]/50'
+          : 'glass-card card-glow border-[var(--border-color)] hover:bg-[var(--card-hover)] hover:border-[var(--border-strong)]'
         }
-        ${item.pinned ? 'ring-1 ring-yellow-400/40' : ''}
-        ${isMultiSelected ? 'ring-2 ring-green-400/60' : ''}
+        ${item.pinned ? 'ring-1 ring-[var(--warning)]/40' : ''}
+        ${isMultiSelected ? 'ring-2 ring-[var(--multi-select)]/70' : ''}
       `}
     >
       {/* Pin button - visible on hover or when selected/pinned */}
@@ -216,13 +195,14 @@ export default function ClipboardCard({
           e.stopPropagation()
           onTogglePin()
         }}
-        className={`absolute top-2 left-2 w-6 h-6 rounded-full bg-black/30 hover:bg-yellow-500/80
-                   flex items-center justify-center transition-all
-                   text-sm ${item.pinned ? 'text-yellow-400 opacity-100' : 'text-white/70 hover:text-white opacity-0 group-hover:opacity-100'}
+        className={`absolute top-2 left-2 w-6 h-6 rounded-full bg-black/25 hover:bg-[var(--warning)]/80
+                   flex items-center justify-center transition-opacity
+                   ${item.pinned ? 'text-[var(--warning)] opacity-100' : 'text-white/70 hover:text-white opacity-0 group-hover:opacity-100'}
                    ${isSelected ? 'opacity-100' : ''}`}
-        title={item.pinned ? 'Unpin' : 'Pin'}
+        title={item.pinned ? t.unpin : t.pin}
+        aria-label={item.pinned ? t.unpin : t.pin}
       >
-        {item.pinned ? '★' : '☆'}
+        <Icon name="star" filled={item.pinned} className="w-3.5 h-3.5" />
       </button>
 
       {/* Delete button - visible on hover or when selected */}
@@ -231,13 +211,14 @@ export default function ClipboardCard({
           e.stopPropagation()
           onDelete()
         }}
-        className={`absolute top-2 right-2 w-6 h-6 rounded-full bg-black/30 hover:bg-red-500/80
-                   flex items-center justify-center transition-all
-                   text-sm text-white/70 hover:text-white
+        className={`absolute top-2 right-2 w-6 h-6 rounded-full bg-black/25 hover:bg-red-500/80
+                   flex items-center justify-center transition-opacity
+                   text-white/70 hover:text-white
                    ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-        title="Delete"
+        title={t.delete}
+        aria-label={t.delete}
       >
-        ×
+        <Icon name="trash" className="w-3.5 h-3.5" />
       </button>
 
       {/* Content - with top padding to avoid overlapping buttons */}
@@ -245,22 +226,59 @@ export default function ClipboardCard({
         {renderContent()}
       </div>
 
-      {/* Footer */}
-      <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getTypeBadgeClass(item.type)} text-white drop-shadow-sm`}>
-            {getTypeIcon(item.type)} {item.type}
+      {/* Contextual action: open link / preview image */}
+      {item.type === 'link' && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            window.electronAPI.openExternal(item.content)
+          }}
+          className={`absolute bottom-9 right-2 w-7 h-7 rounded-lg bg-[var(--card-hover)] border border-[var(--border-color)]
+                     hover:border-[var(--accent)]/50 text-[var(--text-secondary)] hover:text-[var(--accent)]
+                     flex items-center justify-center transition-opacity ${actionVisibility}`}
+          title={t.openInBrowser}
+          aria-label={t.openInBrowser}
+        >
+          <Icon name="open" className="w-4 h-4" />
+        </button>
+      )}
+      {item.type === 'image' && onPreview && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onPreview()
+          }}
+          className={`absolute bottom-9 right-2 w-7 h-7 rounded-lg bg-[var(--card-hover)] border border-[var(--border-color)]
+                     hover:border-[var(--accent)]/50 text-[var(--text-secondary)] hover:text-[var(--accent)]
+                     flex items-center justify-center transition-opacity ${actionVisibility}`}
+          title={t.preview}
+          aria-label={t.preview}
+        >
+          <Icon name="search" className="w-4 h-4" />
+        </button>
+      )}
+
+      {/* Footer — metadata is demoted (tertiary, normal weight) so it never
+          competes with the clipboard content above it. */}
+      <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)]" style={{ color: TYPE_COLOR[item.type] }}>
+            <TypeIcon type={item.type} className="w-3 h-3" />
           </span>
           {item.metadata.sourceApp && (
-            <span className="text-[10px] text-[var(--text-primary)] font-medium truncate max-w-[60px]" title={item.metadata.sourceApp}>
+            <span className="text-[10px] text-[var(--text-tertiary)] truncate" title={item.metadata.sourceApp}>
               {item.metadata.sourceApp}
             </span>
           )}
         </div>
-        <span className="text-[10px] text-[var(--text-primary)] font-medium">
-          {formatTimeAgo(item.createdAt)}
+        <span className="text-[10px] text-[var(--text-tertiary)] flex-shrink-0">
+          {formatTimeAgo(item.createdAt, t)}
         </span>
       </div>
     </div>
   )
 }
+
+// Memoized: only re-render a card when its own props change, not on every App
+// re-render (e.g. the copied toast). The list passes stable-per-data callbacks.
+export default memo(ClipboardCard)
