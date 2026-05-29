@@ -63,6 +63,7 @@ export interface ElectronAPI {
   getSettings: () => Promise<Settings>
   saveSettings: (settings: Settings) => Promise<void>
   openSettings: () => Promise<void>
+  quitApp: () => Promise<void>
   exportHistory: () => Promise<{ success: boolean; path?: string }>
   importHistory: () => Promise<{ success: boolean; count?: number; error?: string }>
   openExternal: (url: string) => Promise<{ success: boolean }>

@@ -124,6 +124,7 @@ export interface Translations {
   importHistoryDesc: string
   importBtn: string
   settingsSaved: string
+  quit: string
 
   // Error boundary
   somethingWrong: string
@@ -240,6 +241,7 @@ const en: Translations = {
   importHistoryDesc: 'Load clipboard history from JSON file',
   importBtn: 'Import',
   settingsSaved: 'Settings saved',
+  quit: 'Quit',
 
   somethingWrong: 'Something went wrong',
   errorHint: 'Press Esc to close and try again'
@@ -355,6 +357,7 @@ const es: Translations = {
   importHistoryDesc: 'Cargar el historial desde un archivo JSON',
   importBtn: 'Importar',
   settingsSaved: 'Ajustes guardados',
+  quit: 'Salir',
 
   somethingWrong: 'Algo salió mal',
   errorHint: 'Pulsa Esc para cerrar e inténtalo de nuevo'
@@ -470,6 +473,7 @@ const fr: Translations = {
   importHistoryDesc: "Charger l'historique depuis un JSON",
   importBtn: 'Importer',
   settingsSaved: 'Paramètres enregistrés',
+  quit: 'Quitter',
 
   somethingWrong: "Une erreur s'est produite",
   errorHint: 'Appuyez sur Échap pour fermer et réessayer'
@@ -585,6 +589,7 @@ const de: Translations = {
   importHistoryDesc: 'Verlauf aus JSON-Datei laden',
   importBtn: 'Importieren',
   settingsSaved: 'Einstellungen gespeichert',
+  quit: 'Beenden',
 
   somethingWrong: 'Etwas ist schiefgelaufen',
   errorHint: 'Esc drücken zum Schließen und erneut versuchen'
@@ -700,6 +705,7 @@ const zh: Translations = {
   importHistoryDesc: '从 JSON 文件加载剪贴板历史',
   importBtn: '导入',
   settingsSaved: '设置已保存',
+  quit: '退出',
 
   somethingWrong: '出现错误',
   errorHint: '按 Esc 关闭并重试'

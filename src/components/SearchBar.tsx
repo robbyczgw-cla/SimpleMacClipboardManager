@@ -78,6 +78,18 @@ export default function SearchBar({ value, onChange, filterType, onFilterChange,
           )
         })}
       </div>
+
+      {/* Settings — always reachable from the panel, independent of the menu-bar icon */}
+      <button
+        onClick={() => window.electronAPI.openSettings()}
+        aria-label={t.settings}
+        title={t.settings}
+        className="flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0
+                   bg-white/5 text-[var(--text-secondary)] border border-[var(--border-color)]
+                   hover:bg-white/10 hover:text-[var(--text-primary)] transition-colors"
+      >
+        <Icon name="settings" className="w-4 h-4" />
+      </button>
     </div>
   )
 }

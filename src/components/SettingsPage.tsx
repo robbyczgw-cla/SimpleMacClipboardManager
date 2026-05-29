@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { getTranslations, languageNames, Language } from '../i18n/translations'
 import type { Settings, PanelPosition, CardSize } from '../types'
 import { defaultSettings, DEFAULT_IGNORED_TYPES } from '../../common/defaults'
+import { Icon } from './icons'
 
 const MB = 1024 * 1024
 
@@ -398,6 +399,24 @@ export default function SettingsPage() {
                 {t.importBtn}
               </button>
             </div>
+          </div>
+        </section>
+
+        {/* App — quit without needing the (possibly hidden) menu-bar icon */}
+        <section className="bg-white/5 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm text-white/70">{t.quit}</label>
+              <p className="text-xs text-white/40">SimpleMacClipboardManager</p>
+            </div>
+            <button
+              onClick={() => window.electronAPI.quitApp()}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded transition-colors
+                         bg-red-500/15 hover:bg-red-500/30 text-red-300 border border-red-500/30"
+            >
+              <Icon name="power" className="w-3.5 h-3.5" />
+              {t.quit}
+            </button>
           </div>
         </section>
       </div>
