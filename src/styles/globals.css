@@ -4,22 +4,27 @@
 
 /* Dark mode (default) - Liquid Glass Design */
 :root {
-  --panel-bg: rgba(18, 18, 20, 0.72);
+  /* Higher alpha keeps text legible over arbitrary wallpaper behind the vibrancy. */
+  --panel-bg: rgba(18, 18, 20, 0.82);
   --panel-bg-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
   --panel-border: rgba(255, 255, 255, 0.18);
-  --card-bg: rgba(255, 255, 255, 0.06);
-  --card-bg-gradient: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
-  --card-hover: rgba(255, 255, 255, 0.1);
+  --card-bg: rgba(255, 255, 255, 0.07);
+  --card-bg-gradient: linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 100%);
+  --card-hover: rgba(255, 255, 255, 0.12);
   --card-selected: rgba(59, 130, 246, 0.28);
   --card-selected-gradient: linear-gradient(145deg, rgba(59, 130, 246, 0.35) 0%, rgba(59, 130, 246, 0.2) 100%);
   --border-color: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.22);
   --border-glow: rgba(255, 255, 255, 0.06);
   --text-primary: rgba(255, 255, 255, 0.98);
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --text-tertiary: rgba(255, 255, 255, 0.5);
+  --text-secondary: rgba(255, 255, 255, 0.78);
+  --text-tertiary: rgba(255, 255, 255, 0.6);
   --accent: #0A84FF;
   --accent-hover: #409CFF;
   --accent-glow: rgba(10, 132, 255, 0.4);
+  --success: #30D158;
+  --warning: #FFD60A;
+  --multi-select: #32D74B;
   --search-bg: rgba(255, 255, 255, 0.06);
   --kbd-bg: rgba(255, 255, 255, 0.1);
   --shadow-color: rgba(0, 0, 0, 0.4);
@@ -29,22 +34,26 @@
 /* Light mode - Liquid Glass Design */
 @media (prefers-color-scheme: light) {
   :root {
-    --panel-bg: rgba(255, 255, 255, 0.65);
+    --panel-bg: rgba(252, 252, 253, 0.78);
     --panel-bg-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
     --panel-border: rgba(255, 255, 255, 0.8);
-    --card-bg: rgba(255, 255, 255, 0.55);
-    --card-bg-gradient: linear-gradient(145deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.5) 100%);
-    --card-hover: rgba(255, 255, 255, 0.75);
+    --card-bg: rgba(255, 255, 255, 0.62);
+    --card-bg-gradient: linear-gradient(145deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.55) 100%);
+    --card-hover: rgba(255, 255, 255, 0.8);
     --card-selected: rgba(59, 130, 246, 0.22);
     --card-selected-gradient: linear-gradient(145deg, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.15) 100%);
-    --border-color: rgba(0, 0, 0, 0.08);
+    --border-color: rgba(0, 0, 0, 0.1);
+    --border-strong: rgba(0, 0, 0, 0.18);
     --border-glow: rgba(255, 255, 255, 0.5);
     --text-primary: rgba(0, 0, 0, 0.92);
-    --text-secondary: rgba(0, 0, 0, 0.65);
-    --text-tertiary: rgba(0, 0, 0, 0.45);
+    --text-secondary: rgba(0, 0, 0, 0.72);
+    --text-tertiary: rgba(0, 0, 0, 0.55);
     --accent: #007AFF;
     --accent-hover: #0A84FF;
     --accent-glow: rgba(0, 122, 255, 0.35);
+    --success: #248A3D;
+    --warning: #B25000;
+    --multi-select: #248A3D;
     --search-bg: rgba(0, 0, 0, 0.04);
     --kbd-bg: rgba(0, 0, 0, 0.06);
     --shadow-color: rgba(0, 0, 0, 0.12);
@@ -90,23 +99,6 @@ body {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Type badges - solid colors for readability */
-.badge-text {
-  background: rgba(100, 100, 110, 0.85);
-}
-.badge-link {
-  background: rgba(10, 132, 255, 0.85);
-}
-.badge-image {
-  background: rgba(155, 70, 195, 0.85);
-}
-.badge-file {
-  background: rgba(220, 140, 10, 0.9);
-}
-.badge-color {
-  background: rgba(40, 180, 75, 0.9);
-}
-
 /* Liquid Glass Effect */
 .glass {
   /* Light blur to complement native vibrancy — 80px was redundant and GPU-heavy */
@@ -121,10 +113,12 @@ body {
     var(--inner-shadow);
 }
 
-/* Glass card effect */
+/* Glass card effect.
+   PERFORMANCE: cards sit ON TOP of the already-blurred panel, so a per-card
+   backdrop-filter re-blurs the panel behind each card for ~no visual gain at high
+   GPU cost (N blur passes per frame during the slide-in + scroll). We drop it and
+   keep just the semi-opaque gradient — one blur layer (the panel) instead of N+1. */
 .glass-card {
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
   background: var(--card-bg);
   background-image: var(--card-bg-gradient);
   box-shadow:
@@ -196,28 +190,6 @@ body {
   animation: slideRight 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Card animation with stagger effect */
-@keyframes cardAppear {
-  from {
-    opacity: 0;
-    transform: scale(0.92) translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.card-animate {
-  animation: cardAppear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  will-change: transform, opacity;
-}
-
-/* Smooth card transitions */
-.card-transition {
-  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
 /* Hover glow effect for cards - Liquid Glass */
 .card-glow:hover {
   box-shadow:
@@ -227,29 +199,10 @@ body {
   transform: translateY(-2px);
 }
 
-/* Selected card glow - Liquid Glass */
-.card-selected-glow {
-  box-shadow:
-    0 0 0 1.5px var(--accent),
-    0 0 40px var(--accent-glow),
-    0 12px 40px var(--shadow-color);
-}
-
-/* Button hover effects */
-.btn-hover {
-  transition: all 0.15s ease;
-}
-
-.btn-hover:hover {
-  transform: scale(1.05);
-}
-
-.btn-hover:active {
-  transform: scale(0.95);
-}
-
-/* Focus ring */
-input:focus, button:focus {
+/* Focus ring — only for keyboard focus (:focus-visible), so clicking a button
+   doesn't paint a ring. Inputs keep their own bespoke focus styling. */
+button:focus-visible,
+[role="option"]:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--accent);
 }
@@ -261,27 +214,6 @@ kbd {
   letter-spacing: 0.02em;
 }
 
-/* Pin star animation */
-@keyframes starPop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.3); }
-  100% { transform: scale(1); }
-}
-
-.star-animate {
-  animation: starPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Subtle pulse for selected items */
-@keyframes subtlePulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
-}
-
-.pulse-subtle {
-  animation: subtlePulse 2s ease-in-out infinite;
-}
-
 /* Fade in animation for modal */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -290,4 +222,25 @@ kbd {
 
 .animate-fade-in {
   animation: fadeIn 0.15s ease-out forwards;
+}
+
+/* Respect the macOS "Reduce Motion" accessibility setting. Elements still reach
+   their final state (opacity 1, no transform) — we just remove the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-up,
+  .animate-slide-down,
+  .animate-slide-left,
+  .animate-slide-right,
+  .animate-fade-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .card-glow:hover {
+    transform: none !important;
+  }
+  * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
