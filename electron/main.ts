@@ -990,8 +990,12 @@ app.whenReady().then(() => {
   // Convert them to on-disk files to reduce storage and memory usage.
   migrateHistoryImagesToDisk()
 
-  // Apply initial settings
-  if (!settings.showInDock) {
+  // Apply initial dock visibility. The app is an LSUIElement (menu-bar agent) so
+  // it starts WITHOUT a Dock icon by default; explicitly show it when the user
+  // opted in, otherwise ensure it stays hidden.
+  if (settings.showInDock) {
+    app.dock?.show()
+  } else {
     app.dock?.hide()
   }
 
