@@ -335,6 +335,9 @@ function updateTrayMenu() {
 
 function openSettings() {
   if (settingsWindow) {
+    // Agent (LSUIElement) apps need an explicit app-level focus to come forward.
+    app.focus({ steal: true })
+    settingsWindow.show()
     settingsWindow.focus()
     return
   }
@@ -367,7 +370,10 @@ function openSettings() {
   }
 
   settingsWindow.once('ready-to-show', () => {
+    // Bring the agent app + its window to the foreground reliably.
+    app.focus({ steal: true })
     settingsWindow?.show()
+    settingsWindow?.focus()
   })
 
   settingsWindow.on('closed', () => {
@@ -1157,6 +1163,7 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('open-settings', openSettings)
+  ipcMain.handle('quit-app', () => app.quit())
 
   // Export history as JSON
   ipcMain.handle('export-history', async () => {

@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSettings: (): Promise<Settings> => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings: Settings) => ipcRenderer.invoke('save-settings', settings),
   openSettings: () => ipcRenderer.invoke('open-settings'),
+  quitApp: () => ipcRenderer.invoke('quit-app'),
   exportHistory: () => ipcRenderer.invoke('export-history'),
   importHistory: () => ipcRenderer.invoke('import-history'),
 

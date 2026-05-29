@@ -20,6 +20,8 @@ export type IconName =
   | 'search'
   | 'clipboard'
   | 'close'
+  | 'settings'
+  | 'power'
 
 interface IconProps {
   name: IconName
@@ -132,6 +134,24 @@ export function Icon({ name, className = 'w-4 h-4', filled = false, strokeWidth 
       return (
         <svg {...common}>
           <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      )
+    case 'settings':
+      return (
+        <svg {...common}>
+          <line x1="4" y1="7.5" x2="20" y2="7.5" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="16.5" x2="20" y2="16.5" />
+          <circle cx="9" cy="7.5" r="2.1" />
+          <circle cx="15" cy="12" r="2.1" />
+          <circle cx="8" cy="16.5" r="2.1" />
+        </svg>
+      )
+    case 'power':
+      return (
+        <svg {...common}>
+          <path d="M12 3.5v8" />
+          <path d="M7.4 6.6a7 7 0 1 0 9.2 0" />
         </svg>
       )
   }
