@@ -4,7 +4,7 @@
 
 # SimpleMacClipboardManager
 
-A free, lightweight clipboard manager for macOS. Keep your clipboard history organized and accessible.
+A free, visual clipboard manager for macOS. Keep your clipboard history organized and accessible.
 
 ![macOS](https://img.shields.io/badge/macOS-000000?style=flat&logo=apple&logoColor=white)
 ![Electron](https://img.shields.io/badge/Electron-47848F?style=flat&logo=electron&logoColor=white)
@@ -35,7 +35,7 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 - **Live Settings** - Most settings apply instantly without restart
 - **Local Only** - All data stays on your Mac, no cloud sync
 - **Privacy Focused** - Ignores password managers automatically
-- **Lightweight** - Minimal resource usage, runs in menu bar
+- **Responsive** - Virtualized history rendering and menu-bar operation
 - **Liquid Glass Design** - Modern macOS-inspired translucent UI with blur effects
 - **Drag & Drop** - Drag items directly into other apps
 - **Merge Paste** - Multi-select with Shift+click, then ⌘M to paste all together
@@ -48,14 +48,16 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 
 ### Download (Recommended)
 
-1. Download the latest `.zip` from [GitHub Releases](../../releases)
+1. Download the latest architecture-specific `.zip` from [GitHub Releases](../../releases):
+   - `arm64` for Apple Silicon Macs
+   - `x64` for Intel Macs
 2. Unzip and drag `SimpleMacClipboardManager.app` to `/Applications`
-3. **First launch** (required for unsigned apps):
+3. **First launch** (required for the current non-notarized builds):
    - Right-click the app → **Open** → **Open**
    - Or run in Terminal: `xattr -cr /Applications/SimpleMacClipboardManager.app`
-4. Grant **Accessibility** permission when prompted (required for global hotkey)
+4. Accessibility permission is requested only when you enable **Paste directly**. The global hotkey and copy-only mode do not require it.
 
-> **Note**: This app is self-signed (not notarized with Apple). macOS will warn you on first launch - this is normal for open-source apps distributed outside the App Store.
+> **Note**: Current GitHub builds use ad-hoc signing and are not notarized by Apple, so macOS can warn on first launch.
 
 ### Build from Source
 
@@ -73,7 +75,7 @@ npm run dev
 # Build for production (creates app in /release folder)
 npm run build
 
-# Build release with self-signing and zip
+# Build arm64 and x64 release ZIPs
 npm run release
 ```
 
@@ -152,7 +154,7 @@ SimpleMacClipboardManager is completely local:
 
 ## Tech Stack
 
-- **Framework**: Electron 28+
+- **Framework**: Electron
 - **Frontend**: React 18 + TypeScript
 - **Build**: Vite
 - **Styling**: Tailwind CSS
