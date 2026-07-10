@@ -2,11 +2,13 @@ import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, nativeImage, sc
 import { join, dirname } from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { exec, execFile } from 'child_process'
+import { createHash } from 'crypto'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import Store from 'electron-store'
 import type { ClipboardItem, ClipboardItemType, ClipboardItemMetadata, Settings } from '../common/types'
 import { defaultSettings, DEFAULT_IGNORED_TYPES, SETTINGS_BOUNDS } from '../common/defaults'
+import { addCapturedItem, compareItems } from '../common/history'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -410,15 +412,6 @@ function clearHistory() {
   if (mainWindow?.isVisible()) mainWindow.webContents.send('history-updated', [])
 }
 
-// Total, STABLE ordering for history: pinned first, then newest first, with an
-// id tiebreaker so items sharing a createdAt (same ms / imported) never shuffle
-// their neighbours when something unrelated is pinned/unpinned.
-function compareItems(a: ClipboardItem, b: ClipboardItem): number {
-  if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1
-  if (b.createdAt !== a.createdAt) return b.createdAt - a.createdAt
-  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
-}
-
 // Move an item to the top of history (when pasted/copied from our app).
 // Builds a fresh item object (never mutates the cached one) and uses an O(n)
 // partition that keeps pinned items first while preserving their order — no
@@ -736,14 +729,14 @@ function startClipboardPolling() {
   console.log('Clipboard polling started with interval:', settings.pollingInterval)
 }
 
-// Track last image by bitmap size + byte-length — far cheaper than toDataURL()
-// which performs a full PNG encode on every poll cycle.
+// Track the last image by a real content fingerprint. Bitmap byte length alone
+// is only width * height * channels, so different same-size screenshots collided.
 let lastImageBitmapKey = ''
 
 function getImageBitmapKey(image: Electron.NativeImage): string {
   const size = image.getSize()
-  const bitmap = image.getBitmap()
-  return `${size.width}x${size.height}:${bitmap.byteLength}`
+  const digest = createHash('sha256').update(image.getBitmap()).digest('hex')
+  return `${size.width}x${size.height}:${digest}`
 }
 
 function pollClipboard() {
@@ -791,8 +784,10 @@ function pollClipboard() {
         pinned: false
       }
 
-      const filtered = historyCache.filter(h => h.content !== text)
-      const updated = [item, ...filtered].slice(0, settings.historyLimit)
+      const updated = addCapturedItem(historyCache, item, {
+        historyLimit: settings.historyLimit,
+        ignoreDuplicates: settings.ignoreDuplicates
+      })
       applyHistoryUpdate(updated)
       return
     }
@@ -855,12 +850,10 @@ function pollClipboard() {
           pinned: false
         }
 
-        // Remove any older copy of the same image so its orphaned file is cleaned
-        // up by applyHistoryUpdate's path diff (mirrors the text branch's filter).
-        const deduped = historyCache.filter(
-          h => !(h.type === 'image' && h.metadata.imageKey === bitmapKey)
-        )
-        const updated = [item, ...deduped].slice(0, settings.historyLimit)
+        const updated = addCapturedItem(historyCache, item, {
+          historyLimit: settings.historyLimit,
+          ignoreDuplicates: settings.ignoreDuplicates
+        })
         applyHistoryUpdate(updated)
       }
     }
