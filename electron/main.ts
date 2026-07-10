@@ -1149,7 +1149,20 @@ app.whenReady().then(() => {
   ipcMain.handle('get-settings', () => getSettings())
 
   ipcMain.handle('save-settings', (_, newSettings: Settings) => {
+    const previous = getSettings()
     const clean = sanitizeSettings(newSettings)
+
+    // Electron globalShortcut does not need Accessibility permission, but the
+    // optional direct-paste flow uses System Events to simulate Cmd+V. Ask only
+    // when that feature is enabled instead of alarming every user at startup.
+    if (
+      process.platform === 'darwin' &&
+      clean.pasteDirectly &&
+      !previous.pasteDirectly
+    ) {
+      systemPreferences.isTrustedAccessibilityClient(true)
+    }
+
     store.set('settings', clean)
     invalidateSettingsCache()
     applySettings(clean)
