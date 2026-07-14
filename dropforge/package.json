@@ -11,3 +11,51 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:web": "vite build",
+    "build": "npm run typecheck && npm run test && vite build && electron-builder --dir",
+    "release": "npm run typecheck && npm run test && vite build && electron-builder"
+  },
+  "dependencies": {
+    "electron-store": "10.1.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "@vitejs/plugin-react": "4.7.0",
+    "electron": "33.4.11",
+    "electron-builder": "25.1.8",
+    "typescript": "5.9.3",
+    "vite": "6.4.3",
+    "vite-plugin-electron": "0.29.1",
+    "vite-plugin-electron-renderer": "0.14.7",
+    "vitest": "2.1.9"
+  },
+  "build": {
+    "appId": "at.robby.dropforge",
+    "productName": "DropForge",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dir",
+          "arch": ["arm64"]
+        }
+      ],
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    }
+  }
+}
