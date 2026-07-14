@@ -1,0 +1,13 @@
+{
+  "name": "dropforge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A local-first macOS transformation workbench for text, URLs, images and files.",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:web": "vite build",
