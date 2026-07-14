@@ -16,7 +16,7 @@ export default defineConfig({
           build: {
             outDir: 'dist-electron',
             rollupOptions: {
-              external: ['electron']
+              external: ['electron', 'sharp']
             }
           }
         }
@@ -30,7 +30,7 @@ export default defineConfig({
           build: {
             outDir: 'dist-electron',
             rollupOptions: {
-              external: ['electron'],
+              external: ['electron', 'sharp'],
               output: {
                 format: 'cjs',
                 entryFileNames: 'preload.js'
