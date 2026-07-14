@@ -1,0 +1,114 @@
+@font-face {
+  font-family: "DropForge Sans";
+  src: local("-apple-system");
+}
+
+:root {
+  font-family: "DropForge Sans", -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  color: rgba(255, 255, 255, 0.92);
+  background: transparent;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; min-width: 720px; height: 100%; margin: 0; overflow: hidden; }
+button, textarea { font: inherit; }
+button { color: inherit; }
+
+.shell {
+  height: 100%;
+  padding: 24px;
+  overflow: auto;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(255, 138, 61, 0.13), transparent 34%),
+    radial-gradient(circle at 94% 20%, rgba(136, 92, 246, 0.13), transparent 35%),
+    rgba(17, 17, 21, 0.89);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; -webkit-app-region: drag; }
+.topbar h1 { margin: 2px 0 0; font-size: 28px; letter-spacing: -0.04em; }
+.eyebrow { color: #ff9b5e; font-size: 10px; font-weight: 800; letter-spacing: 0.18em; }
+.topbar-actions, .topbar button, .drop-zone button, .panel button { -webkit-app-region: no-drag; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.privacy-pill, .kind-badge { border: 1px solid rgba(255, 255, 255, 0.11); border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
+.privacy-pill { padding: 7px 10px; color: rgba(255, 255, 255, 0.62); font-size: 12px; }
+
+.ghost-button, .secondary-button, .primary-button {
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.ghost-button:hover, .secondary-button:hover { background: rgba(255, 255, 255, 0.12); }
+
+.drop-zone, .panel { border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.045); backdrop-filter: blur(24px); }
+.drop-zone { padding: 14px; border-radius: 15px; }
+.drop-zone-heading, .section-heading, .output-actions { display: flex; align-items: center; justify-content: space-between; }
+.drop-zone-heading > div { display: flex; align-items: center; gap: 10px; }
+.kind-badge { min-width: 45px; padding: 5px 8px; text-align: center; color: #ffb487; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.kind-url { color: #8fc7ff; }
+.kind-json { color: #bc9eff; }
+
+textarea {
+  width: 100%;
+  height: 112px;
+  margin-top: 12px;
+  resize: none;
+  outline: none;
+  border: 0;
+  border-radius: 10px;
+  padding: 13px;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(0, 0, 0, 0.22);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+textarea:focus { box-shadow: inset 0 0 0 1px rgba(255, 155, 94, 0.5); }
+.hint-row { display: flex; gap: 18px; margin-top: 9px; color: rgba(255, 255, 255, 0.38); font-size: 10px; }
+.workspace-grid { display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 14px; margin-top: 14px; }
+.panel { min-height: 260px; padding: 15px; border-radius: 15px; }
+.section-heading { margin-bottom: 12px; color: rgba(255, 255, 255, 0.4); font-size: 11px; }
+.section-heading > div { display: flex; align-items: center; gap: 9px; }
+.section-heading h2 { margin: 0; color: rgba(255, 255, 255, 0.86); font-size: 15px; }
+.section-number { color: #ff9b5e; font-family: "SFMono-Regular", monospace; font-size: 10px; }
+.action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.action-card, .recipe-card { cursor: pointer; text-align: left; border: 1px solid rgba(255, 255, 255, 0.09); background: rgba(255, 255, 255, 0.045); }
+.action-card { min-height: 67px; border-radius: 10px; padding: 10px; }
+.action-card strong, .action-card span, .recipe-card strong, .recipe-card small { display: block; }
+.action-card strong { margin-bottom: 4px; font-size: 12px; }
+.action-card span, .recipe-card small { color: rgba(255, 255, 255, 0.42); font-size: 10px; line-height: 1.35; }
+.action-card:hover:not(:disabled), .recipe-card:hover:not(:disabled) { border-color: rgba(255, 155, 94, 0.38); background: rgba(255, 155, 94, 0.08); }
+button:disabled { cursor: not-allowed; opacity: 0.42; }
+.subheading { margin: 14px 0 7px; color: rgba(255, 255, 255, 0.4); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.recipe-list { display: grid; gap: 7px; }
+.recipe-card { display: flex; align-items: center; gap: 9px; border-radius: 10px; padding: 9px; }
+.recipe-icon { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 8px; color: #ffae7c; background: rgba(255, 155, 94, 0.1); }
+.output-panel { display: flex; flex-direction: column; }
+.output-panel pre { flex: 1; min-height: 148px; max-height: 270px; margin: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 10px; padding: 12px; color: rgba(255, 255, 255, 0.82); background: rgba(0, 0, 0, 0.2); font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; line-height: 1.5; }
+.processing { color: #ffad7a; }
+.output-actions { margin-top: 10px; color: rgba(255, 255, 255, 0.4); font-size: 10px; }
+.primary-button { border-color: rgba(255, 155, 94, 0.34); color: #fff; background: linear-gradient(135deg, #f17936, #af5aee); }
+.empty-output, .error-state { display: grid; flex: 1; min-height: 205px; place-content: center; text-align: center; border: 1px dashed rgba(255, 255, 255, 0.12); border-radius: 11px; }
+.empty-output span { margin-bottom: 8px; color: #ff9b5e; font-size: 25px; }
+.empty-output strong { font-size: 12px; }
+.empty-output p { margin: 5px 0 0; color: rgba(255, 255, 255, 0.38); font-size: 10px; }
+.error-state { padding: 16px; color: #ff9f9f; background: rgba(255, 64, 64, 0.05); font-size: 12px; }
+
+@media (prefers-color-scheme: light) {
+  :root { color: rgba(20, 20, 24, 0.9); }
+  .shell { background: radial-gradient(circle at 8% 0%, rgba(255, 138, 61, 0.14), transparent 34%), radial-gradient(circle at 94% 20%, rgba(136, 92, 246, 0.12), transparent 35%), rgba(244, 244, 247, 0.91); border-color: rgba(0, 0, 0, 0.1); }
+  .drop-zone, .panel { border-color: rgba(0, 0, 0, 0.09); background: rgba(255, 255, 255, 0.52); }
+  textarea, .output-panel pre { color: rgba(20, 20, 24, 0.88); background: rgba(255, 255, 255, 0.67); }
+  .section-heading h2, .action-card strong, .recipe-card strong, .empty-output strong { color: rgba(20, 20, 24, 0.85); }
+  .action-card, .recipe-card, .privacy-pill, .kind-badge, .ghost-button, .secondary-button { border-color: rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.54); }
+  .action-card span, .recipe-card small, .section-heading, .hint-row, .empty-output p, .output-actions, .privacy-pill { color: rgba(20, 20, 24, 0.45); }
+}
+
+@media (max-width: 760px) {
+  .workspace-grid { grid-template-columns: 1fr; }
+}
