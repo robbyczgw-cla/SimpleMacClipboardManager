@@ -41,4 +41,16 @@ describe('migrateStoreState', () => {
 
     expect(result.state.history.map(item => item.id)).toEqual(['valid'])
   })
+
+  it('shows onboarding only for fresh installs, not existing stores', () => {
+    const legacy = migrateStoreState({ history: [], settings: {} }, defaultSettings, 1000)
+    const fresh = migrateStoreState({ schemaVersion: CURRENT_SCHEMA_VERSION, history: [], settings: defaultSettings }, defaultSettings, 1000)
+    const existing = migrateStoreState({ schemaVersion: CURRENT_SCHEMA_VERSION, history: [{
+      id: 'existing', type: 'text', content: 'already here', metadata: {}, createdAt: 1, searchText: 'already here'
+    }], settings: {} }, defaultSettings, 1000)
+
+    expect(legacy.state.settings.onboardingCompleted).toBe(true)
+    expect(fresh.state.settings.onboardingCompleted).toBe(false)
+    expect(existing.state.settings.onboardingCompleted).toBe(true)
+  })
 })

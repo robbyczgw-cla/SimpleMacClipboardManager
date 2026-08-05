@@ -15,6 +15,7 @@ import { createDefaultSavedCollection, DEFAULT_SAVED_COLLECTION_ID } from '../co
 import { isSafeId } from '../common/ids'
 import { matchesIgnoredApplication, pruneHistory } from '../common/privacy'
 import { StoreRepository } from './repositories/store-repository'
+import { productMetadata } from '../common/product'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -358,7 +359,7 @@ function createTray() {
   } else {
     tray = new Tray(icon)
   }
-  tray.setToolTip('SimpleMacClipboardManager')
+  tray.setToolTip(productMetadata.displayName)
 
   updateTrayMenu()
   tray.on('click', toggleWindow)
@@ -396,10 +397,23 @@ function updateTrayMenu() {
   tray.setContextMenu(menu)
 }
 
-function openSettings() {
+type SettingsRoute = 'settings' | 'onboarding'
+
+function loadSettingsRoute(route: SettingsRoute) {
+  if (!settingsWindow) return
+  const url = process.env.VITE_DEV_SERVER_URL
+  if (url) {
+    settingsWindow.loadURL(`${url}#${route}`)
+  } else {
+    settingsWindow.loadFile(join(__dirname, '../dist/index.html'), { hash: route })
+  }
+}
+
+function openSettings(route: SettingsRoute = 'settings') {
   if (settingsWindow) {
     // Agent (LSUIElement) apps need an explicit app-level focus to come forward.
     app.focus({ steal: true })
+    loadSettingsRoute(route)
     settingsWindow.show()
     settingsWindow.focus()
     return
@@ -408,7 +422,7 @@ function openSettings() {
   settingsWindow = new BrowserWindow({
     width: 480,
     height: 700,
-    title: 'Settings',
+    title: `${productMetadata.displayName} Settings`,
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -425,12 +439,7 @@ function openSettings() {
 
   configureExternalLinkHandling(settingsWindow)
 
-  const url = process.env.VITE_DEV_SERVER_URL
-  if (url) {
-    settingsWindow.loadURL(url + '#settings')
-  } else {
-    settingsWindow.loadFile(join(__dirname, '../dist/index.html'), { hash: 'settings' })
-  }
+  loadSettingsRoute(route)
 
   settingsWindow.once('ready-to-show', () => {
     // Bring the agent app + its window to the foreground reliably.
@@ -502,7 +511,7 @@ function showHelp() {
     type: 'info',
     icon: nativeImage.createFromPath(iconPath),
     title: 'How to Use',
-    message: 'SimpleMacClipboardManager',
+    message: productMetadata.displayName,
     detail: `Keyboard Shortcuts:
 • ⌥Space - Open/close clipboard panel
 • ←→ or ↑↓ - Navigate between items
@@ -546,7 +555,7 @@ function showAbout() {
     type: 'info',
     icon: nativeImage.createFromPath(iconPath),
     title: 'About',
-    message: 'SimpleMacClipboardManager',
+    message: productMetadata.displayName,
     detail: `Version ${version}
 
 A visual, privacy-focused clipboard manager for macOS.
@@ -558,7 +567,7 @@ Created by @robbyczgw-cla`,
     cancelId: 2
   }).then(result => {
     if (result.response === 0) {
-      shell.openExternal('https://github.com/robbyczgw-cla/SimpleMacClipboardManager')
+      shell.openExternal(productMetadata.supportUrl)
     } else if (result.response === 1) {
       shell.openExternal('https://github.com/robbyczgw-cla')
     }
@@ -1288,6 +1297,7 @@ app.whenReady().then(() => {
 
   createWindow()
   createTray()
+  if (!settings.onboardingCompleted) openSettings('onboarding')
   startClipboardPolling()
 
   // Register hotkey
@@ -1478,7 +1488,8 @@ app.whenReady().then(() => {
     applySettings(clean)
   })
 
-  ipcMain.handle('open-settings', openSettings)
+  ipcMain.handle('open-settings', (_, route: unknown) => openSettings(route === 'onboarding' ? 'onboarding' : 'settings'))
+  ipcMain.handle('close-settings', () => settingsWindow?.close())
   ipcMain.handle('quit-app', () => app.quit())
 
   // Export history as JSON

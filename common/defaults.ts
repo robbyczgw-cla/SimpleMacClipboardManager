@@ -45,7 +45,8 @@ export const defaultSettings: Settings = {
   // 8MB default; images larger than this will be downscaled before persisting.
   maxImageBytes: 8 * 1024 * 1024,
   retentionDays: 0,
-  ignoredApplications: []
+  ignoredApplications: [],
+  onboardingCompleted: false
 }
 
 // Bounds used to sanitize untrusted settings (from the UI or an import) before
