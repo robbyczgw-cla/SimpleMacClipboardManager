@@ -123,7 +123,7 @@ export function migrateStoreState(
   const rawSettings = isRecord(record.settings) ? record.settings : {}
   const onboardingCompleted = typeof rawSettings.onboardingCompleted === 'boolean'
     ? rawSettings.onboardingCompleted
-    : record.schemaVersion === undefined
+    : record.schemaVersion === undefined || history.length > 0 || collections.length > 0
       ? true
       : fallbackSettings.onboardingCompleted
 

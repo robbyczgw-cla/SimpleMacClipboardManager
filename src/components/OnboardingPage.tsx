@@ -40,10 +40,10 @@ export default function OnboardingPage() {
     void window.electronAPI.saveSettings(next)
   }, [])
 
-  const finish = useCallback(() => {
-    saveSettings({ ...settings, onboardingCompleted: true })
-    window.electronAPI.closeSettings()
-  }, [saveSettings, settings])
+  const finish = useCallback(async () => {
+    await window.electronAPI.saveSettings({ ...settings, onboardingCompleted: true })
+    await window.electronAPI.closeSettings()
+  }, [settings])
 
   useEffect(() => {
     if (!recording) return
