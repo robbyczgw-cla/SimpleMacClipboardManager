@@ -460,7 +460,7 @@ function toggleWindow() {
     // Remember which app was active before opening the panel, asynchronously.
     // It's only needed later for auto-paste, so it can resolve after show().
     execFile('osascript', ['-e', FRONTMOST_APP_SCRIPT], { timeout: 500 }, (err, stdout) => {
-      previousApp = err ? '' : (stdout || '').trim()
+      previousApp = err ? '' : (stdout || '').trim().split('||')[0].trim()
     })
   }
 }
