@@ -132,6 +132,21 @@ export interface Translations {
   settingsSaved: string
   quit: string
 
+  // Onboarding
+  onboardingTitle: string
+  onboardingLocal: string
+  onboardingLocalDesc: string
+  onboardingHotkey: string
+  onboardingHotkeyDesc: string
+  onboardingPaste: string
+  onboardingPasteDesc: string
+  onboardingCopyTest: string
+  onboardingCopyTestDone: string
+  onboardingNext: string
+  onboardingBack: string
+  onboardingSkip: string
+  onboardingFinish: string
+
   // Error boundary
   somethingWrong: string
   errorHint: string
@@ -255,6 +270,20 @@ const en: Translations = {
   settingsSaved: 'Settings saved',
   quit: 'Quit',
 
+  onboardingTitle: 'Welcome to your local clipboard shelf',
+  onboardingLocal: 'Your content stays on this Mac',
+  onboardingLocalDesc: 'Recent, Saved and Collections are stored locally. No account or cloud sync is required.',
+  onboardingHotkey: 'Choose your quick-panel shortcut',
+  onboardingHotkeyDesc: 'Use the button below to record a shortcut. It is applied immediately.',
+  onboardingPaste: 'Choose how Enter behaves',
+  onboardingPasteDesc: 'Copy-only is the privacy-friendly default. Direct Paste uses macOS Accessibility to paste into the previous app.',
+  onboardingCopyTest: 'Copy a test item',
+  onboardingCopyTestDone: 'Test item copied',
+  onboardingNext: 'Next',
+  onboardingBack: 'Back',
+  onboardingSkip: 'Skip setup',
+  onboardingFinish: 'Finish setup',
+
   somethingWrong: 'Something went wrong',
   errorHint: 'Press Esc to close and try again'
 }
@@ -376,6 +405,20 @@ const es: Translations = {
   importBtn: 'Importar',
   settingsSaved: 'Ajustes guardados',
   quit: 'Salir',
+
+  onboardingTitle: 'Tu estantería local del portapapeles',
+  onboardingLocal: 'Tu contenido permanece en este Mac',
+  onboardingLocalDesc: 'Recientes, Guardados y Colecciones se almacenan localmente. No necesitas cuenta ni nube.',
+  onboardingHotkey: 'Elige el atajo del panel',
+  onboardingHotkeyDesc: 'Usa el botón para grabar un atajo. Se aplica de inmediato.',
+  onboardingPaste: 'Elige qué hace Enter',
+  onboardingPasteDesc: 'Solo copiar es el valor predeterminado. Pegar directamente usa Accesibilidad de macOS.',
+  onboardingCopyTest: 'Copiar un elemento de prueba',
+  onboardingCopyTestDone: 'Elemento de prueba copiado',
+  onboardingNext: 'Siguiente',
+  onboardingBack: 'Atrás',
+  onboardingSkip: 'Omitir configuración',
+  onboardingFinish: 'Finalizar configuración',
 
   somethingWrong: 'Algo salió mal',
   errorHint: 'Pulsa Esc para cerrar e inténtalo de nuevo'
@@ -499,6 +542,20 @@ const fr: Translations = {
   settingsSaved: 'Paramètres enregistrés',
   quit: 'Quitter',
 
+  onboardingTitle: 'Votre étagère de presse-papiers locale',
+  onboardingLocal: 'Votre contenu reste sur ce Mac',
+  onboardingLocalDesc: 'Récents, Enregistrés et Collections sont stockés localement. Aucun compte ni cloud requis.',
+  onboardingHotkey: 'Choisissez le raccourci du panneau',
+  onboardingHotkeyDesc: 'Utilisez le bouton pour enregistrer un raccourci. Il est appliqué immédiatement.',
+  onboardingPaste: 'Choisissez le comportement d’Entrée',
+  onboardingPasteDesc: 'Copier seulement est le choix par défaut. Coller directement utilise l’accessibilité macOS.',
+  onboardingCopyTest: 'Copier un élément de test',
+  onboardingCopyTestDone: 'Élément de test copié',
+  onboardingNext: 'Suivant',
+  onboardingBack: 'Retour',
+  onboardingSkip: 'Ignorer la configuration',
+  onboardingFinish: 'Terminer la configuration',
+
   somethingWrong: "Une erreur s'est produite",
   errorHint: 'Appuyez sur Échap pour fermer et réessayer'
 }
@@ -621,6 +678,20 @@ const de: Translations = {
   settingsSaved: 'Einstellungen gespeichert',
   quit: 'Beenden',
 
+  onboardingTitle: 'Willkommen in deiner lokalen Clipboard-Shelf',
+  onboardingLocal: 'Deine Inhalte bleiben auf diesem Mac',
+  onboardingLocalDesc: 'Zuletzt, Gespeichert und Sammlungen werden lokal gespeichert. Kein Konto und keine Cloud nötig.',
+  onboardingHotkey: 'Wähle den Shortcut für das Panel',
+  onboardingHotkeyDesc: 'Mit dem Button kannst du einen Shortcut aufnehmen. Er gilt sofort.',
+  onboardingPaste: 'Lege fest, was Enter macht',
+  onboardingPasteDesc: 'Nur kopieren ist der datenschutzfreundliche Standard. Direkt einfügen nutzt die macOS-Bedienungshilfen.',
+  onboardingCopyTest: 'Testeintrag kopieren',
+  onboardingCopyTestDone: 'Testeintrag kopiert',
+  onboardingNext: 'Weiter',
+  onboardingBack: 'Zurück',
+  onboardingSkip: 'Setup überspringen',
+  onboardingFinish: 'Setup abschließen',
+
   somethingWrong: 'Etwas ist schiefgelaufen',
   errorHint: 'Esc drücken zum Schließen und erneut versuchen'
 }
@@ -742,6 +813,20 @@ const zh: Translations = {
   importBtn: '导入',
   settingsSaved: '设置已保存',
   quit: '退出',
+
+  onboardingTitle: '欢迎使用本地剪贴板收藏架',
+  onboardingLocal: '你的内容保留在这台 Mac 上',
+  onboardingLocalDesc: '最近、已保存和收藏夹都在本地存储。不需要账户或云同步。',
+  onboardingHotkey: '选择面板快捷键',
+  onboardingHotkeyDesc: '使用按钮录制快捷键，设置会立即生效。',
+  onboardingPaste: '选择 Enter 的行为',
+  onboardingPasteDesc: '仅复制是更注重隐私的默认选项。直接粘贴需要 macOS 辅助功能权限。',
+  onboardingCopyTest: '复制测试项目',
+  onboardingCopyTestDone: '测试项目已复制',
+  onboardingNext: '下一步',
+  onboardingBack: '返回',
+  onboardingSkip: '跳过设置',
+  onboardingFinish: '完成设置',
 
   somethingWrong: '出现错误',
   errorHint: '按 Esc 关闭并重试'

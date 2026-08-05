@@ -72,6 +72,8 @@ export interface Settings {
   loadFavicons: boolean
   /** Max image size to persist (bytes). Larger images will be downscaled. */
   maxImageBytes: number
+  /** First-run guide completion marker. Existing stores migrate to true. */
+  onboardingCompleted: boolean
 }
 
 export interface ElectronAPI {
@@ -93,7 +95,8 @@ export interface ElectronAPI {
   hideWindow: () => Promise<void>
   getSettings: () => Promise<Settings>
   saveSettings: (settings: Settings) => Promise<void>
-  openSettings: () => Promise<void>
+  openSettings: (route?: 'settings' | 'onboarding') => Promise<void>
+  closeSettings: () => Promise<void>
   quitApp: () => Promise<void>
   exportHistory: () => Promise<{ success: boolean; path?: string }>
   importHistory: () => Promise<{ success: boolean; count?: number; error?: string }>

@@ -120,6 +120,12 @@ export function migrateStoreState(
   const collections = Array.isArray(record.collections)
     ? record.collections.map(value => normalizeCollection(value, now)).filter((collection): collection is Collection => collection !== null)
     : []
+  const rawSettings = isRecord(record.settings) ? record.settings : {}
+  const onboardingCompleted = typeof rawSettings.onboardingCompleted === 'boolean'
+    ? rawSettings.onboardingCompleted
+    : record.schemaVersion === undefined
+      ? true
+      : fallbackSettings.onboardingCompleted
 
   if (history.some(item => item.savedAt !== undefined) && !collections.some(collection => collection.id === DEFAULT_SAVED_COLLECTION_ID)) {
     collections.unshift(createDefaultSavedCollection(now))
@@ -131,7 +137,8 @@ export function migrateStoreState(
     collections,
     settings: {
       ...fallbackSettings,
-      ...(isRecord(record.settings) ? record.settings : {})
+      ...rawSettings,
+      onboardingCompleted
     } as Settings
   }
   const changed = JSON.stringify(state) !== JSON.stringify(raw)

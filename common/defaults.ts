@@ -35,7 +35,8 @@ export const defaultSettings: Settings = {
   cardSize: 'medium',
   loadFavicons: false,
   // 8MB default; images larger than this will be downscaled before persisting.
-  maxImageBytes: 8 * 1024 * 1024
+  maxImageBytes: 8 * 1024 * 1024,
+  onboardingCompleted: false
 }
 
 // Bounds used to sanitize untrusted settings (from the UI or an import) before
