@@ -36,9 +36,6 @@ A free, visual clipboard manager for macOS. Keep your clipboard history organize
 - **Live Settings** - Most settings apply instantly without restart
 - **Local Only** - All data stays on your Mac, no cloud sync
 - **Privacy Focused** - Ignores password managers automatically
-- **Pause Capture** - Pause for 5 minutes, 30 minutes, or indefinitely
-- **App Exclusions** - Ignore selected apps by bundle identifier or name
-- **Retention Controls** - Expire Recent items while keeping Saved items
 - **Responsive** - Virtualized history rendering and menu-bar operation
 - **Liquid Glass Design** - Modern macOS-inspired translucent UI with blur effects
 - **Drag & Drop** - Drag items directly into other apps
@@ -150,9 +147,6 @@ Access settings via menu bar → Settings:
 
 ### Privacy
 - **Ignore password managers** - Don't capture from 1Password, Bitwarden, etc.
-- **Recent retention** - Keep Recent items forever, or expire them after 1, 7, or 30 days. Saved items are exempt.
-- **Ignored apps** - Add one macOS bundle identifier or exact display name per line. Bundle IDs are preferred.
-- **Pause capture** - Use the panel, menu bar, or tray menu to pause capture for 5 minutes, 30 minutes, or indefinitely. Pause is intentionally reset when the app restarts.
 
 ## Privacy
 
@@ -161,9 +155,6 @@ Clipboard contents are processed and stored locally on your Mac and are never up
 - Images are stored under the app's local user-data directory
 - Optional URL favicons can request small icon images from Google when enabled
 - Opening a link is an explicit user action and uses the system's external browser
-- Pause capture advances clipboard fingerprints without saving new items; it does not delete existing history.
-- App exclusions use the cached frontmost app identity and are best-effort; sensitive pasteboard markers remain ignored independently.
-- JSON exports contain clipboard data and should be handled like sensitive backups. The app does not claim secure erase on APFS/SSD storage.
 
 ## Tech Stack
 
