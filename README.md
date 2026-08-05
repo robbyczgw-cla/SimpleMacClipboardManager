@@ -208,6 +208,11 @@ This project was inspired by:
 
 ## License
 
+Commercial distribution planning, pricing and launch copy are tracked in
+[`docs/COMMERCE_PLAN.md`](docs/COMMERCE_PLAN.md) and
+[`docs/LANDING_PAGE.md`](docs/LANDING_PAGE.md). The repository remains MIT
+licensed; no checkout credentials are stored in source.
+
 MIT License - see [LICENSE](LICENSE) for details.
 
 ---
