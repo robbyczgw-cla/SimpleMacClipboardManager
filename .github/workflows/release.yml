@@ -1,0 +1,95 @@
+name: Signed macOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing or new semantic version tag (for example v1.0.0)"
+        required: true
+        type: string
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and notarize ${{ matrix.arch }}
+    runs-on: macos-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x64]
+    env:
+      CSC_LINK: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+      CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      CSC_IDENTITY_AUTO_DISCOVERY: true
+      APPLE_API_KEY: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify source
+        run: npm run verify
+
+      - name: Build signed DMG and ZIP
+        run: npm run package:mac:${{ matrix.arch }}
+
+      - name: Upload architecture artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: |
+            release/*.dmg
+            release/*.zip
+          if-no-files-found: error
+
+  draft-release:
+    name: Create draft GitHub release
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download architecture artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: Generate SHA-256 checksums
+        working-directory: release
+        run: shasum -a 256 *.dmg *.zip > SHA256SUMS.txt
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          draft: true
+          generate_release_notes: true
+          files: |
+            release/*.dmg
+            release/*.zip
+            release/SHA256SUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

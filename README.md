@@ -81,6 +81,10 @@ npm run release
 npm run release:mac
 ```
 
+Signed/notarized releases are created by the tag-triggered GitHub Actions
+workflow after Apple Developer secrets are configured. Pull-request CI remains
+unsigned.
+
 ## Usage
 
 ### Keyboard Shortcuts
