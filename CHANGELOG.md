@@ -5,6 +5,17 @@ All notable changes to SimpleMacClipboardManager will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Consolidated clipboard correctness, CI and accessibility/release work from draft PRs #9–#11
+- Image duplicate identities now use decoded bitmap SHA-256 fingerprints
+- History updates never delete image files outside the app-managed images directory
+
+### Changed
+- Application compilation and macOS packaging now use separate npm scripts
+- Current unsigned/ad-hoc distribution wording no longer recommends removing Gatekeeper quarantine
+
 ## [0.13.2] - 2026-05-29
 
 ### Added

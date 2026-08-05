@@ -2,13 +2,14 @@ import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, nativeImage, sc
 import { join, dirname } from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { exec, execFile } from 'child_process'
-import { createHash } from 'crypto'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import Store from 'electron-store'
 import type { ClipboardItem, ClipboardItemType, ClipboardItemMetadata, Settings } from '../common/types'
 import { defaultSettings, DEFAULT_IGNORED_TYPES, SETTINGS_BOUNDS } from '../common/defaults'
-import { addCapturedItem, compareItems } from '../common/history'
+import { addCapturedItem, compareItems, limitHistory } from '../common/history'
+import { getBitmapFingerprint } from '../common/image-fingerprint'
+import { isPathWithinDirectory } from '../common/paths'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -37,6 +38,10 @@ function deleteImageFileForItem(item: ClipboardItem) {
   if (item.type !== 'image') return
   const imagePath = item.metadata.imagePath
   if (!imagePath) return
+  if (!isPathWithinDirectory(imagePath, getImagesDir())) {
+    console.warn('Refusing to delete image outside managed directory:', imagePath)
+    return
+  }
   try {
     if (existsSync(imagePath)) unlinkSync(imagePath)
   } catch (e) {
@@ -48,12 +53,12 @@ function applyHistoryUpdate(next: ClipboardItem[]) {
   // Cleanup removed image files (best-effort)
   const previousPaths = new Set(
     historyCache
-      .filter(i => i.type === 'image' && i.metadata.imagePath)
+      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, getImagesDir()))
       .map(i => i.metadata.imagePath as string)
   )
   const nextPaths = new Set(
     next
-      .filter(i => i.type === 'image' && i.metadata.imagePath)
+      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, getImagesDir()))
       .map(i => i.metadata.imagePath as string)
   )
   for (const p of previousPaths) {
@@ -488,7 +493,7 @@ function showAbout() {
     message: 'SimpleMacClipboardManager',
     detail: `Version ${version}
 
-A free, lightweight clipboard manager for macOS.
+A visual, privacy-focused clipboard manager for macOS.
 Keep your clipboard history organized and accessible.
 
 Created by @robbyczgw-cla`,
@@ -574,7 +579,11 @@ function validateImportedItem(raw: any, settings: Settings): ClipboardItem | nul
       }
     }
     // Accept an on-disk path only if it actually exists on this machine.
-    if (typeof md.imagePath === 'string' && existsSync(md.imagePath)) {
+    if (
+      typeof md.imagePath === 'string' &&
+      isPathWithinDirectory(md.imagePath, getImagesDir()) &&
+      existsSync(md.imagePath)
+    ) {
       return {
         id: typeof raw.id === 'string' && raw.id ? raw.id : uuidv4(),
         type: 'image',
@@ -735,8 +744,7 @@ let lastImageBitmapKey = ''
 
 function getImageBitmapKey(image: Electron.NativeImage): string {
   const size = image.getSize()
-  const digest = createHash('sha256').update(image.getBitmap()).digest('hex')
-  return `${size.width}x${size.height}:${digest}`
+  return getBitmapFingerprint(size.width, size.height, image.getBitmap())
 }
 
 function pollClipboard() {
@@ -797,8 +805,8 @@ function pollClipboard() {
     const image = clipboard.readImage()
 
     if (!image.isEmpty()) {
-      // Use bitmap dimensions + byte-length for change detection instead of
-      // toDataURL() which does a full PNG encode every cycle.
+      // Use a decoded bitmap fingerprint for change detection instead of
+      // toDataURL(), which performs a full PNG encode every poll cycle.
       const bitmapKey = getImageBitmapKey(image)
 
       if (bitmapKey !== lastImageBitmapKey && bitmapKey !== '0x0:0') {
@@ -1217,9 +1225,8 @@ app.whenReady().then(() => {
           newItems.push(item)
         }
 
-        const merged = [...historyCache, ...newItems]
-        merged.sort(compareItems)
-        applyHistoryUpdate(merged.slice(0, settings.historyLimit))
+        const merged = limitHistory([...historyCache, ...newItems], settings.historyLimit)
+        applyHistoryUpdate(merged)
         return { success: true, count: newItems.length }
       } catch (e) {
         return { success: false, error: 'Invalid JSON file' }

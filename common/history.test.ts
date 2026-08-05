@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ClipboardItem } from './types'
-import { addCapturedItem } from './history'
+import { addCapturedItem, limitHistory } from './history'
 
 function item(
   id: string,
@@ -89,5 +89,25 @@ describe('addCapturedItem', () => {
       historyLimit: 2,
       ignoreDuplicates: true
     }).map(entry => entry.id)).toEqual(['three', 'two'])
+  })
+
+  it('uses the stable id tie-breaker when timestamps are equal', () => {
+    const sameTime = [
+      item('z-item', 'z', 100),
+      item('a-item', 'a', 100)
+    ]
+
+    expect(limitHistory(sameTime, 10).map(entry => entry.id)).toEqual(['a-item', 'z-item'])
+    expect(sameTime.map(entry => entry.id)).toEqual(['z-item', 'a-item'])
+  })
+
+  it('does not drop a pinned item when a newer unpinned item is captured', () => {
+    const pinned = item('saved', 'keep me', 1, { pinned: true })
+    const captured = item('new', 'new value', 2)
+
+    expect(addCapturedItem([pinned], captured, {
+      historyLimit: 1,
+      ignoreDuplicates: true
+    }).map(entry => entry.id)).toEqual(['saved'])
   })
 })

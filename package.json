@@ -6,13 +6,17 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:app && electron-builder",
+    "build": "npm run build:app",
+    "package:mac:dir": "npm run build:app && electron-builder --mac dir",
+    "package:mac:arm64": "npm run build:app && electron-builder --mac zip --arm64",
+    "package:mac:x64": "npm run build:app && electron-builder --mac zip --x64",
     "release": "npm run build:app && electron-builder --mac zip --arm64 --x64",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"electron .\"",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit",
     "test": "vitest run",
-    "build:app": "tsc && vite build"
+    "build:app": "tsc && vite build",
+    "verify": "npm run typecheck && npm test && npm run build"
   },
   "author": "",
   "license": "MIT",

@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Typecheck, test and build
+    name: Typecheck, test and application build
     runs-on: macos-latest
     timeout-minutes: 20
 
@@ -37,5 +37,8 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: Build macOS app
+      - name: Build application
         run: npm run build
+
+      - name: Package unsigned macOS app
+        run: npm run package:mac:dir

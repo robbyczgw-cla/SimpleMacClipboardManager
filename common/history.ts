@@ -11,6 +11,17 @@ export function compareItems(a: ClipboardItem, b: ClipboardItem): number {
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
 }
 
+/**
+ * Apply the canonical history ordering and the configured retention limit
+ * without mutating the caller's array.
+ */
+export function limitHistory(history: ClipboardItem[], historyLimit: number): ClipboardItem[] {
+  const limit = Number.isFinite(historyLimit) ? Math.max(1, Math.floor(historyLimit)) : 1
+  return [...history]
+    .sort(compareItems)
+    .slice(0, limit)
+}
+
 function isSameContent(a: ClipboardItem, b: ClipboardItem): boolean {
   if (a.type === 'image' || b.type === 'image') {
     return (
@@ -44,7 +55,5 @@ export function addCapturedItem(
     }
   }
 
-  return [nextItem, ...remaining]
-    .sort(compareItems)
-    .slice(0, Math.max(1, options.historyLimit))
+  return limitHistory([nextItem, ...remaining], options.historyLimit)
 }
