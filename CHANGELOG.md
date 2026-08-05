@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added explicit dependency-audit, watch-test and signed-release entry-point scripts
 - Added schema versioning, migration backups and a repository boundary around local persistence
 - Added a durable Saved Shelf, custom Collections, ID-based collection IPC and collection-preserving export/import
+- Added pause capture controls, app exclusions, time-based Recent retention and technical privacy documentation
 
 ## [0.13.2] - 2026-05-29
 

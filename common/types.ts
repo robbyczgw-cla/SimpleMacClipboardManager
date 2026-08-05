@@ -53,6 +53,8 @@ export interface StoreState {
 export type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
 export type Language = 'en' | 'es' | 'fr' | 'de' | 'zh'
 export type CardSize = 'small' | 'medium' | 'large'
+export type RetentionDays = 0 | 1 | 7 | 30
+export type PauseCaptureDuration = 'indefinite' | 5 | 30
 
 export interface Settings {
   historyLimit: number
@@ -72,10 +74,22 @@ export interface Settings {
   loadFavicons: boolean
   /** Max image size to persist (bytes). Larger images will be downscaled. */
   maxImageBytes: number
+  /** Number of days to retain unsaved Recent items; 0 means never expire. */
+  retentionDays: RetentionDays
+  /** App names or bundle identifiers that should never be captured. */
+  ignoredApplications: string[]
+}
+
+export interface CaptureStatus {
+  paused: boolean
+  pausedUntil: number | null
 }
 
 export interface ElectronAPI {
   getHistory: () => Promise<ClipboardItem[]>
+  getCaptureStatus: () => Promise<CaptureStatus>
+  pauseCapture: (duration: PauseCaptureDuration) => Promise<void>
+  resumeCapture: () => Promise<void>
   getCollections: () => Promise<Collection[]>
   createCollection: (name: string) => Promise<Collection | null>
   renameCollection: (id: string, name: string) => Promise<boolean>
@@ -102,6 +116,7 @@ export interface ElectronAPI {
   getImageDragPath?: (itemId: string) => Promise<{ success: boolean; path?: string; mime?: string; filename?: string }>
 
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => () => void
+  onCaptureStatusUpdated: (callback: (status: CaptureStatus) => void) => () => void
   onCollectionsUpdated: (callback: (collections: Collection[]) => void) => () => void
   onPanelShown: (callback: () => void) => () => void
   onPanelHidden: (callback: () => void) => () => void

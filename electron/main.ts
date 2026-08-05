@@ -4,14 +4,16 @@ import { fileURLToPath, pathToFileURL } from 'url'
 import { exec, execFile } from 'child_process'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs'
 import { v4 as uuidv4 } from 'uuid'
-import type { ClipboardItem, ClipboardItemType, ClipboardItemMetadata, Collection, Settings } from '../common/types'
-import { defaultSettings, DEFAULT_IGNORED_TYPES, SETTINGS_BOUNDS } from '../common/defaults'
+import type { ApplicationIdentity } from '../common/privacy'
+import type { CaptureStatus, ClipboardItem, ClipboardItemType, ClipboardItemMetadata, Collection, PauseCaptureDuration, RetentionDays, Settings } from '../common/types'
+import { defaultSettings, ALWAYS_IGNORED_TYPES, DEFAULT_IGNORED_TYPES, SETTINGS_BOUNDS } from '../common/defaults'
 import { addCapturedItem, compareItems, isItemSaved, limitHistory } from '../common/history'
 import { addItemToCollection, removeItemFromCollection as removeItemFromCollectionState } from '../common/collections'
 import { getBitmapFingerprint } from '../common/image-fingerprint'
 import { isPathWithinDirectory } from '../common/paths'
 import { createDefaultSavedCollection, DEFAULT_SAVED_COLLECTION_ID } from '../common/migrations'
 import { isSafeId } from '../common/ids'
+import { matchesIgnoredApplication, pruneHistory } from '../common/privacy'
 import { StoreRepository } from './repositories/store-repository'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -161,7 +163,51 @@ let settingsWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let lastClipboardContent = ''
 let clipboardPollInterval: ReturnType<typeof setInterval> | null = null
+let retentionCleanupInterval: ReturnType<typeof setInterval> | null = null
 let previousApp = '' // Store the app that was active before opening clipboard panel
+let capturePaused = false
+let capturePausedUntil: number | null = null
+let capturePauseTimer: ReturnType<typeof setTimeout> | null = null
+
+function getCaptureStatus(): CaptureStatus {
+  if (capturePaused && capturePausedUntil !== null && capturePausedUntil <= Date.now()) {
+    capturePaused = false
+    capturePausedUntil = null
+    if (capturePauseTimer) clearTimeout(capturePauseTimer)
+    capturePauseTimer = null
+    updateTrayMenu()
+    notifyCaptureStatusUpdated()
+  }
+  return { paused: capturePaused, pausedUntil: capturePausedUntil }
+}
+
+function isCapturePaused(): boolean {
+  return getCaptureStatus().paused
+}
+
+function notifyCaptureStatusUpdated() {
+  if (mainWindow?.isVisible()) mainWindow.webContents.send('capture-status-updated', getCaptureStatus())
+}
+
+function resumeCapture() {
+  capturePaused = false
+  capturePausedUntil = null
+  if (capturePauseTimer) clearTimeout(capturePauseTimer)
+  capturePauseTimer = null
+  updateTrayMenu()
+  notifyCaptureStatusUpdated()
+}
+
+function pauseCapture(duration: PauseCaptureDuration) {
+  capturePaused = true
+  capturePausedUntil = duration === 'indefinite' ? null : Date.now() + duration * 60 * 1000
+  if (capturePauseTimer) clearTimeout(capturePauseTimer)
+  if (capturePausedUntil !== null) {
+    capturePauseTimer = setTimeout(resumeCapture, Math.max(0, capturePausedUntil - Date.now()))
+  }
+  updateTrayMenu()
+  notifyCaptureStatusUpdated()
+}
 
 function hideMainWindow() {
   if (!mainWindow) return
@@ -323,6 +369,8 @@ function createTray() {
 function updateTrayMenu() {
   if (!tray) return
 
+  const paused = getCaptureStatus().paused
+
   const menu = Menu.buildFromTemplate([
     { label: 'Show Clipboard (⌥Space)', click: () => toggleWindow() },
     { type: 'separator' },
@@ -330,7 +378,17 @@ function updateTrayMenu() {
     { label: 'How to Use...', click: () => showHelp() },
     { label: 'About...', click: () => showAbout() },
     { type: 'separator' },
-    { label: 'Clear History', click: () => clearHistory() },
+    {
+      label: paused ? 'Resume Capture' : 'Pause Capture',
+      submenu: paused
+        ? [{ label: 'Resume Capture', click: () => resumeCapture() }]
+        : [
+            { label: 'Pause for 5 minutes', click: () => pauseCapture(5) },
+            { label: 'Pause for 30 minutes', click: () => pauseCapture(30) },
+            { label: 'Pause indefinitely', click: () => pauseCapture('indefinite') }
+          ]
+    },
+    { label: 'Clear Recent', click: () => clearHistory() },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() }
   ])
@@ -820,8 +878,8 @@ const PASSWORD_MANAGER_APPS = [
 // value synchronously and kicks a non-blocking background refresh when stale, so
 // the poll loop and panel-open path are never stalled waiting on System Events.
 const FRONTMOST_APP_SCRIPT =
-  'tell application "System Events" to get name of first application process whose frontmost is true'
-let _frontmostAppCache = ''
+  'tell application "System Events" to tell first application process whose frontmost is true to return name & "||" & bundle identifier'
+let _frontmostAppCache: ApplicationIdentity = { name: '' }
 let _frontmostAppCacheTime = 0
 let _frontmostRefreshing = false
 const FRONTMOST_APP_CACHE_TTL = 2000
@@ -832,7 +890,13 @@ function refreshFrontmostApp() {
   execFile('osascript', ['-e', FRONTMOST_APP_SCRIPT], { timeout: 500 }, (err, stdout) => {
     _frontmostRefreshing = false
     _frontmostAppCacheTime = Date.now()
-    if (!err && stdout) _frontmostAppCache = stdout.trim().toLowerCase()
+    if (!err && stdout) {
+      const [name, bundleId] = stdout.trim().split('||')
+      _frontmostAppCache = {
+        name: (name || '').trim().toLowerCase(),
+        bundleId: (bundleId || '').trim().toLowerCase() || undefined
+      }
+    }
   })
 }
 
@@ -840,6 +904,11 @@ function getFrontmostApp(): string {
   if (Date.now() - _frontmostAppCacheTime >= FRONTMOST_APP_CACHE_TTL) {
     refreshFrontmostApp() // fire-and-forget; the result lands for the next read
   }
+  return _frontmostAppCache.name
+}
+
+function getFrontmostApplicationIdentity(): ApplicationIdentity {
+  getFrontmostApp()
   return _frontmostAppCache
 }
 
@@ -860,6 +929,17 @@ function hasIgnoredPasteboardType(): boolean {
   }
 }
 
+function hasAlwaysIgnoredPasteboardType(): boolean {
+  try {
+    const formats = clipboard.availableFormats()
+    return formats.some(format =>
+      ALWAYS_IGNORED_TYPES.some(ignored => format.toLowerCase().includes(ignored.toLowerCase()))
+    )
+  } catch {
+    return false
+  }
+}
+
 function isPasswordManagerActive(): boolean {
   // First check pasteboard types (more reliable)
   if (hasIgnoredPasteboardType()) {
@@ -868,6 +948,28 @@ function isPasswordManagerActive(): boolean {
   // Fallback to app name check
   const frontApp = getFrontmostApp()
   return PASSWORD_MANAGER_APPS.some(pm => frontApp.includes(pm))
+}
+
+function isIgnoredApplicationActive(): boolean {
+  return matchesIgnoredApplication(
+    getFrontmostApplicationIdentity(),
+    getSettings().ignoredApplications || []
+  )
+}
+
+function pruneExpiredHistory() {
+  const retentionDays = getSettings().retentionDays
+  const pruned = pruneHistory(historyCache, retentionDays)
+  if (pruned.length !== historyCache.length) applyHistoryUpdate(pruned)
+}
+
+function startRetentionCleanup() {
+  if (retentionCleanupInterval) clearInterval(retentionCleanupInterval)
+  retentionCleanupInterval = null
+  pruneExpiredHistory()
+  if (getSettings().retentionDays !== 0) {
+    retentionCleanupInterval = setInterval(pruneExpiredHistory, 15 * 60 * 1000)
+  }
 }
 
 function startClipboardPolling() {
@@ -886,6 +988,7 @@ function startClipboardPolling() {
   }
 
   refreshFrontmostApp() // warm the cache so the first capture has a source app
+  startRetentionCleanup()
   clipboardPollInterval = setInterval(pollClipboard, settings.pollingInterval)
   console.log('Clipboard polling started with interval:', settings.pollingInterval)
 }
@@ -906,9 +1009,20 @@ function pollClipboard() {
     // --- Text check first (very cheap: string comparison) ---
     const text = clipboard.readText()
 
+    if (isCapturePaused()) {
+      // Advance the fingerprints while paused so resuming does not silently
+      // capture content that was copied during the pause window.
+      lastClipboardContent = text || ''
+      if (!text) {
+        const pausedImage = clipboard.readImage()
+        if (!pausedImage.isEmpty()) lastImageBitmapKey = getImageBitmapKey(pausedImage)
+      }
+      return
+    }
+
     if (text && text !== lastClipboardContent) {
       // Text changed — check password manager once, then process
-      if (settings.ignorePasswordManagers && isPasswordManagerActive()) {
+      if (isIgnoredApplicationActive() || hasAlwaysIgnoredPasteboardType() || (settings.ignorePasswordManagers && isPasswordManagerActive())) {
         console.log('Ignored clipboard from password manager')
         lastClipboardContent = text
         return
@@ -964,7 +1078,7 @@ function pollClipboard() {
       if (bitmapKey !== lastImageBitmapKey && bitmapKey !== '0x0:0') {
         lastImageBitmapKey = bitmapKey
 
-        if (settings.ignorePasswordManagers && isPasswordManagerActive()) {
+        if (isIgnoredApplicationActive() || hasAlwaysIgnoredPasteboardType() || (settings.ignorePasswordManagers && isPasswordManagerActive())) {
           return
         }
 
@@ -1046,10 +1160,19 @@ function sanitizeSettings(input: Partial<Settings> | undefined): Settings {
     SETTINGS_BOUNDS.maxImageBytesMin,
     SETTINGS_BOUNDS.maxImageBytesMax
   )
+  const retentionDays = Math.floor(toNum(s.retentionDays, defaultSettings.retentionDays))
+  s.retentionDays = [0, 1, 7, 30].includes(retentionDays) ? retentionDays as RetentionDays : defaultSettings.retentionDays
 
   s.ignoredPasteboardTypes = Array.isArray(s.ignoredPasteboardTypes)
     ? s.ignoredPasteboardTypes.filter(t => typeof t === 'string')
     : DEFAULT_IGNORED_TYPES
+  s.ignoredApplications = Array.isArray(s.ignoredApplications)
+    ? s.ignoredApplications
+      .filter((value): value is string => typeof value === 'string')
+      .map(value => value.trim().slice(0, 200))
+      .filter(Boolean)
+      .slice(0, 100)
+    : []
   if (typeof s.hotkey !== 'string' || !s.hotkey.trim()) s.hotkey = defaultSettings.hotkey
   if (!['bottom', 'top', 'left', 'right'].includes(s.panelPosition)) s.panelPosition = 'bottom'
   if (!['small', 'medium', 'large'].includes(s.cardSize)) s.cardSize = 'medium'
@@ -1173,6 +1296,11 @@ app.whenReady().then(() => {
 
   // IPC handlers
   ipcMain.handle('get-history', () => historyCache)
+  ipcMain.handle('get-capture-status', () => getCaptureStatus())
+  ipcMain.handle('pause-capture', (_, duration: unknown) => {
+    if (duration === 'indefinite' || duration === 5 || duration === 30) pauseCapture(duration)
+  })
+  ipcMain.handle('resume-capture', () => resumeCapture())
   ipcMain.handle('get-collections', () => repository.collections)
   ipcMain.handle('create-collection', (_, name: unknown) => createCollection(name))
   ipcMain.handle('rename-collection', (_, id: unknown, name: unknown) => renameCollection(id, name))
@@ -1459,6 +1587,8 @@ app.on('will-quit', () => {
 
   globalShortcut.unregisterAll()
   if (clipboardPollInterval) clearInterval(clipboardPollInterval)
+  if (retentionCleanupInterval) clearInterval(retentionCleanupInterval)
+  if (capturePauseTimer) clearTimeout(capturePauseTimer)
 })
 
 // This is a menu-bar agent. Electron's `window-all-closed` event no longer

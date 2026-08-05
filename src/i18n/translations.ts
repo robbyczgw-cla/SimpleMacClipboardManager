@@ -115,6 +115,21 @@ export interface Translations {
   recordShortcut: string
   recordingPrompt: string
   privacy: string
+  pauseCapture: string
+  pauseFor5Minutes: string
+  pauseFor30Minutes: string
+  pauseIndefinitely: string
+  resumeCapture: string
+  capturePaused: string
+  retention: string
+  retentionDesc: string
+  never: string
+  oneDay: string
+  sevenDays: string
+  thirtyDays: string
+  appExclusions: string
+  appExclusionsDesc: string
+  appExclusionsPlaceholder: string
   ignorePasswordManagers: string
   ignorePasswordManagersDesc: string
   loadFavicons: string
@@ -125,6 +140,7 @@ export interface Translations {
   backup: string
   exportHistory: string
   exportHistoryDesc: string
+  exportPrivacyWarning: string
   exportBtn: string
   importHistory: string
   importHistoryDesc: string
@@ -238,6 +254,21 @@ const en: Translations = {
   recordShortcut: 'Record',
   recordingPrompt: 'Press keys…',
   privacy: 'Privacy',
+  pauseCapture: 'Pause capture',
+  pauseFor5Minutes: 'Pause for 5 minutes',
+  pauseFor30Minutes: 'Pause for 30 minutes',
+  pauseIndefinitely: 'Pause indefinitely',
+  resumeCapture: 'Resume capture',
+  capturePaused: 'Capture paused',
+  retention: 'Recent retention',
+  retentionDesc: 'Saved items are always kept.',
+  never: 'Never',
+  oneDay: '1 day',
+  sevenDays: '7 days',
+  thirtyDays: '30 days',
+  appExclusions: 'Ignored apps',
+  appExclusionsDesc: 'One app name or bundle identifier per line. Bundle IDs are more reliable.',
+  appExclusionsPlaceholder: 'com.example.App\nExample App',
   ignorePasswordManagers: 'Ignore password managers',
   ignorePasswordManagersDesc: "Don't capture from 1Password, Bitwarden, etc.",
   loadFavicons: 'Load favicons for links',
@@ -248,6 +279,7 @@ const en: Translations = {
   backup: 'Backup',
   exportHistory: 'Export History',
   exportHistoryDesc: 'Save clipboard history as JSON file',
+  exportPrivacyWarning: 'Exports contain clipboard contents and may include sensitive information. Continue?',
   exportBtn: 'Export',
   importHistory: 'Import History',
   importHistoryDesc: 'Load clipboard history from JSON file',
@@ -360,6 +392,21 @@ const es: Translations = {
   recordShortcut: 'Grabar',
   recordingPrompt: 'Pulsa teclas…',
   privacy: 'Privacidad',
+  pauseCapture: 'Pausar captura',
+  pauseFor5Minutes: 'Pausar 5 minutos',
+  pauseFor30Minutes: 'Pausar 30 minutos',
+  pauseIndefinitely: 'Pausar indefinidamente',
+  resumeCapture: 'Reanudar captura',
+  capturePaused: 'Captura pausada',
+  retention: 'Retención de recientes',
+  retentionDesc: 'Los elementos guardados siempre se conservan.',
+  never: 'Nunca',
+  oneDay: '1 día',
+  sevenDays: '7 días',
+  thirtyDays: '30 días',
+  appExclusions: 'Aplicaciones ignoradas',
+  appExclusionsDesc: 'Un nombre o identificador de paquete por línea. Los identificadores son más fiables.',
+  appExclusionsPlaceholder: 'com.example.App\nAplicación',
   ignorePasswordManagers: 'Ignorar gestores de contraseñas',
   ignorePasswordManagersDesc: 'No capturar de 1Password, Bitwarden, etc.',
   loadFavicons: 'Cargar favicons de enlaces',
@@ -370,6 +417,7 @@ const es: Translations = {
   backup: 'Copia de seguridad',
   exportHistory: 'Exportar historial',
   exportHistoryDesc: 'Guardar el historial como archivo JSON',
+  exportPrivacyWarning: 'Las exportaciones contienen el portapapeles y pueden incluir información sensible. ¿Continuar?',
   exportBtn: 'Exportar',
   importHistory: 'Importar historial',
   importHistoryDesc: 'Cargar el historial desde un archivo JSON',
@@ -482,6 +530,21 @@ const fr: Translations = {
   recordShortcut: 'Enregistrer',
   recordingPrompt: 'Appuyez sur des touches…',
   privacy: 'Confidentialité',
+  pauseCapture: 'Mettre en pause la capture',
+  pauseFor5Minutes: 'Pause de 5 minutes',
+  pauseFor30Minutes: 'Pause de 30 minutes',
+  pauseIndefinitely: 'Pause indéfinie',
+  resumeCapture: 'Reprendre la capture',
+  capturePaused: 'Capture en pause',
+  retention: 'Rétention des récents',
+  retentionDesc: 'Les éléments enregistrés sont toujours conservés.',
+  never: 'Jamais',
+  oneDay: '1 jour',
+  sevenDays: '7 jours',
+  thirtyDays: '30 jours',
+  appExclusions: 'Applications ignorées',
+  appExclusionsDesc: 'Un nom ou identifiant de bundle par ligne. Les identifiants sont plus fiables.',
+  appExclusionsPlaceholder: 'com.example.App\nApplication',
   ignorePasswordManagers: 'Ignorer les gestionnaires de mots de passe',
   ignorePasswordManagersDesc: 'Ne pas capturer depuis 1Password, Bitwarden, etc.',
   loadFavicons: 'Charger les favicons des liens',
@@ -492,6 +555,7 @@ const fr: Translations = {
   backup: 'Sauvegarde',
   exportHistory: "Exporter l'historique",
   exportHistoryDesc: "Enregistrer l'historique en JSON",
+  exportPrivacyWarning: 'Les exports contiennent le presse-papiers et peuvent inclure des informations sensibles. Continuer ?',
   exportBtn: 'Exporter',
   importHistory: "Importer l'historique",
   importHistoryDesc: "Charger l'historique depuis un JSON",
@@ -604,6 +668,21 @@ const de: Translations = {
   recordShortcut: 'Aufnehmen',
   recordingPrompt: 'Tasten drücken…',
   privacy: 'Datenschutz',
+  pauseCapture: 'Aufzeichnung pausieren',
+  pauseFor5Minutes: '5 Minuten pausieren',
+  pauseFor30Minutes: '30 Minuten pausieren',
+  pauseIndefinitely: 'Unbegrenzt pausieren',
+  resumeCapture: 'Aufzeichnung fortsetzen',
+  capturePaused: 'Aufzeichnung pausiert',
+  retention: 'Aufbewahrung für „Zuletzt“',
+  retentionDesc: 'Gespeicherte Einträge bleiben immer erhalten.',
+  never: 'Nie',
+  oneDay: '1 Tag',
+  sevenDays: '7 Tage',
+  thirtyDays: '30 Tage',
+  appExclusions: 'Ignorierte Apps',
+  appExclusionsDesc: 'Ein App-Name oder eine Bundle-ID pro Zeile. Bundle-IDs sind zuverlässiger.',
+  appExclusionsPlaceholder: 'com.example.App\nBeispiel-App',
   ignorePasswordManagers: 'Passwort-Manager ignorieren',
   ignorePasswordManagersDesc: 'Nicht von 1Password, Bitwarden usw. erfassen',
   loadFavicons: 'Favicons für Links laden',
@@ -614,6 +693,7 @@ const de: Translations = {
   backup: 'Sicherung',
   exportHistory: 'Verlauf exportieren',
   exportHistoryDesc: 'Verlauf als JSON-Datei speichern',
+  exportPrivacyWarning: 'Exporte enthalten Zwischenablageinhalte und können sensible Informationen enthalten. Fortfahren?',
   exportBtn: 'Exportieren',
   importHistory: 'Verlauf importieren',
   importHistoryDesc: 'Verlauf aus JSON-Datei laden',
@@ -726,6 +806,21 @@ const zh: Translations = {
   recordShortcut: '录制',
   recordingPrompt: '请按键…',
   privacy: '隐私',
+  pauseCapture: '暂停捕获',
+  pauseFor5Minutes: '暂停 5 分钟',
+  pauseFor30Minutes: '暂停 30 分钟',
+  pauseIndefinitely: '无限期暂停',
+  resumeCapture: '恢复捕获',
+  capturePaused: '捕获已暂停',
+  retention: '最近记录保留时间',
+  retentionDesc: '已保存的项目始终保留。',
+  never: '永不',
+  oneDay: '1 天',
+  sevenDays: '7 天',
+  thirtyDays: '30 天',
+  appExclusions: '忽略的应用',
+  appExclusionsDesc: '每行填写一个应用名称或包标识符。包标识符更可靠。',
+  appExclusionsPlaceholder: 'com.example.App\n示例应用',
   ignorePasswordManagers: '忽略密码管理器',
   ignorePasswordManagersDesc: '不从 1Password、Bitwarden 等捕获',
   loadFavicons: '加载链接的网站图标',
@@ -736,6 +831,7 @@ const zh: Translations = {
   backup: '备份',
   exportHistory: '导出历史',
   exportHistoryDesc: '将剪贴板历史保存为 JSON 文件',
+  exportPrivacyWarning: '导出文件包含剪贴板内容，可能含有敏感信息。继续吗？',
   exportBtn: '导出',
   importHistory: '导入历史',
   importHistoryDesc: '从 JSON 文件加载剪贴板历史',

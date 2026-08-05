@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getTranslations, languageNames, Language } from '../i18n/translations'
-import type { Settings, PanelPosition, CardSize } from '../types'
+import type { RetentionDays, Settings, PanelPosition, CardSize } from '../types'
 import { defaultSettings, DEFAULT_IGNORED_TYPES } from '../../common/defaults'
 import { Icon } from './icons'
 
@@ -166,6 +166,22 @@ export default function SettingsPage() {
                 className="w-4 h-4 rounded accent-blue-500"
               />
             </div>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <label className="text-sm text-white/70">{t.retention}</label>
+                <p className="text-xs text-white/40">{t.retentionDesc}</p>
+              </div>
+              <select
+                value={settings.retentionDays}
+                onChange={e => handleChange('retentionDays', Number(e.target.value) as RetentionDays)}
+                className="bg-white/10 border border-white/10 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value={0}>{t.never}</option>
+                <option value={1}>{t.oneDay}</option>
+                <option value={7}>{t.sevenDays}</option>
+                <option value={30}>{t.thirtyDays}</option>
+              </select>
+            </div>
           </div>
         </section>
 
@@ -263,6 +279,16 @@ export default function SettingsPage() {
                 checked={settings.loadFavicons}
                 onChange={e => handleChange('loadFavicons', e.target.checked)}
                 className="w-4 h-4 rounded accent-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-white/70">{t.appExclusions}</label>
+              <p className="text-xs text-white/40 mb-2">{t.appExclusionsDesc}</p>
+              <textarea
+                value={(settings.ignoredApplications || []).join('\n')}
+                onChange={e => handleChange('ignoredApplications', e.target.value.split('\n').map(value => value.trim()).filter(Boolean))}
+                className="w-full h-24 bg-white/10 border border-white/10 rounded px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-blue-500 resize-none"
+                placeholder={t.appExclusionsPlaceholder}
               />
             </div>
             {settings.ignorePasswordManagers && (
@@ -370,6 +396,7 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={async () => {
+                  if (!window.confirm(t.exportPrivacyWarning)) return
                   const result = await window.electronAPI.exportHistory()
                   if (result.success) {
                     setSaved(true)
