@@ -96,9 +96,14 @@ The main process handles:
 - `hide-window` - Hides the panel
 
 ### Storage
-Uses `electron-store` for persistent storage of:
-- Clipboard history (up to 2000 items)
+Uses a versioned `StoreRepository` backed by `electron-store` for persistent storage of:
+- Clipboard history and Saved/Shelf collection IDs
 - User settings
+
+The renderer sends stable item IDs for paste, copy, delete and save actions.
+The main process resolves the authoritative item and validates managed paths
+before touching the clipboard or filesystem. A pure migration layer upgrades
+legacy unversioned stores and creates a pre-migration backup.
 
 ## Preload Script (electron/preload.ts)
 

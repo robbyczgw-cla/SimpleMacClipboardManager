@@ -23,7 +23,31 @@ export interface ClipboardItem {
   metadata: ClipboardItemMetadata
   createdAt: number
   searchText: string
+  /** Timestamp at which the user deliberately saved this item to the Shelf. */
+  savedAt?: number
+  /** IDs of user/system collections containing this item. */
+  collectionIds?: string[]
+  /** User-defined search labels reserved for the Shelf workflow. */
+  tags?: string[]
+  /** Legacy v0 flag; migrations and the UI treat it as saved state. */
   pinned?: boolean
+}
+
+export interface Collection {
+  id: string
+  name: string
+  icon?: string
+  createdAt: number
+  updatedAt: number
+  sortOrder: number
+  system?: boolean
+}
+
+export interface StoreState {
+  schemaVersion: number
+  history: ClipboardItem[]
+  collections: Collection[]
+  settings: Settings
 }
 
 export type PanelPosition = 'bottom' | 'top' | 'left' | 'right'
@@ -52,12 +76,13 @@ export interface Settings {
 
 export interface ElectronAPI {
   getHistory: () => Promise<ClipboardItem[]>
-  pasteItem: (item: ClipboardItem) => Promise<void>
-  pastePlain: (item: ClipboardItem) => Promise<void>
-  copyOnly: (item: ClipboardItem) => Promise<void>
+  pasteItem: (itemId: string) => Promise<void>
+  pastePlain: (itemId: string) => Promise<void>
+  copyOnly: (itemId: string) => Promise<void>
   copyText: (text: string) => Promise<void>
   deleteItem: (id: string) => Promise<void>
   togglePin: (id: string) => Promise<void>
+  toggleSaved: (id: string) => Promise<void>
   clearHistory: () => Promise<void>
   hideWindow: () => Promise<void>
   getSettings: () => Promise<Settings>
@@ -68,7 +93,7 @@ export interface ElectronAPI {
   importHistory: () => Promise<{ success: boolean; count?: number; error?: string }>
   openExternal: (url: string) => Promise<{ success: boolean }>
   /** Create (or return) a temp file path for an image item (used for drag & drop). */
-  getImageDragPath?: (item: ClipboardItem) => Promise<{ success: boolean; path?: string; mime?: string; filename?: string }>
+  getImageDragPath?: (itemId: string) => Promise<{ success: boolean; path?: string; mime?: string; filename?: string }>
 
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => () => void
   onPanelShown: (callback: () => void) => () => void

@@ -101,13 +101,40 @@ describe('addCapturedItem', () => {
     expect(sameTime.map(entry => entry.id)).toEqual(['z-item', 'a-item'])
   })
 
-  it('does not drop a pinned item when a newer unpinned item is captured', () => {
+  it('keeps a pinned item and retains the configured number of recent items', () => {
     const pinned = item('saved', 'keep me', 1, { pinned: true })
     const captured = item('new', 'new value', 2)
 
     expect(addCapturedItem([pinned], captured, {
       historyLimit: 1,
       ignoreDuplicates: true
-    }).map(entry => entry.id)).toEqual(['saved'])
+    }).map(entry => entry.id)).toEqual(['saved', 'new'])
+  })
+
+  it('retains saved items outside the recent history limit', () => {
+    const saved = item('saved', 'keep forever', 1, { savedAt: 1, pinned: false })
+    const recent = [item('newest', 'newest', 3), item('older', 'older', 2)]
+
+    expect(limitHistory([saved, ...recent], 1).map(entry => entry.id))
+      .toEqual(['saved', 'newest'])
+  })
+
+  it('preserves saved state and collection membership on duplicate capture', () => {
+    const existing = item('original', 'same', 1, {
+      savedAt: 1,
+      collectionIds: ['system-saved', 'project-a'],
+      tags: ['important']
+    })
+    const captured = item('replacement', 'same', 2)
+
+    const [result] = addCapturedItem([existing], captured, {
+      historyLimit: 1,
+      ignoreDuplicates: true
+    })
+
+    expect(result.id).toBe('original')
+    expect(result.savedAt).toBe(1)
+    expect(result.collectionIds).toEqual(['system-saved', 'project-a'])
+    expect(result.tags).toEqual(['important'])
   })
 })

@@ -11,12 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Consolidated clipboard correctness, CI and accessibility/release work from draft PRs #9–#11
 - Image duplicate identities now use decoded bitmap SHA-256 fingerprints
 - History updates never delete image files outside the app-managed images directory
+- Renderer paste/copy/drag actions now resolve authoritative items by stable ID in the main process
+- Legacy pinned items migrate into durable Saved state without being lost to the Recent history limit
 
 ### Changed
 - Application compilation and macOS packaging now use separate npm scripts
 - Current unsigned/ad-hoc distribution wording no longer recommends removing Gatekeeper quarantine
 - Modernized the runtime and release toolchain to Electron 43.3.0 and electron-builder 26.15.3
 - Added explicit dependency-audit, watch-test and signed-release entry-point scripts
+- Added schema versioning, migration backups and a repository boundary around local persistence
 
 ## [0.13.2] - 2026-05-29
 
