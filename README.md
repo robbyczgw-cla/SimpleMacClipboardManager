@@ -6,10 +6,6 @@
 
 A free, visual clipboard manager for macOS. Keep your clipboard history organized and accessible.
 
-> Working product direction: a local-first visual Clipboard Shelf for Mac. The
-> final commercial name is intentionally not fixed yet; `ClipShelf` is only an
-> internal placeholder.
-
 ![macOS](https://img.shields.io/badge/macOS-000000?style=flat&logo=apple&logoColor=white)
 ![Electron](https://img.shields.io/badge/Electron-47848F?style=flat&logo=electron&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black)
@@ -38,7 +34,6 @@ A free, visual clipboard manager for macOS. Keep your clipboard history organize
 - **Multi-Language** - Available in English, Spanish, French, German, and Chinese
 - **Dark/Light Mode** - Automatically adapts to your system theme
 - **Live Settings** - Most settings apply instantly without restart
-- **First-run Onboarding** - Understand local storage, choose a hotkey, and opt into Direct Paste
 - **Local Only** - All data stays on your Mac, no cloud sync
 - **Privacy Focused** - Ignores password managers automatically
 - **Responsive** - Virtualized history rendering and menu-bar operation
