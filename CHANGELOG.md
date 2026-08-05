@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modernized the runtime and release toolchain to Electron 43.3.0 and electron-builder 26.15.3
 - Added explicit dependency-audit, watch-test and signed-release entry-point scripts
 - Added schema versioning, migration backups and a repository boundary around local persistence
+- Added a durable Saved Shelf, custom Collections, ID-based collection IPC and collection-preserving export/import
 
 ## [0.13.2] - 2026-05-29
 

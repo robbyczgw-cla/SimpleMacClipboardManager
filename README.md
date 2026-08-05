@@ -24,7 +24,8 @@ A free, visual clipboard manager for macOS. Keep your clipboard history organize
 - **Smart Detection** - Automatically categorizes content types
 - **Fast Search** - Type to filter through your clipboard history
 - **Filter by Type** - Quick filter buttons for text, links, colors, files, images
-- **Pin Favorites** - Star important items to keep them at the top
+- **Saved Shelf** - Star important items to keep them durable outside Recent
+- **Collections** - Organize saved items into custom collections
 - **Quick Paste** - `⌘1-9` to instantly paste items by position
 - **Paste as Plain Text** - `⇧Enter` to paste without formatting
 - **Source App Tracking** - See which app content was copied from
@@ -95,6 +96,7 @@ npm run release:mac
 | `⌘1-9` | Quick paste items 1-9 |
 | `⌘A` | Add current item to multi-selection |
 | `⌘M` | Merge paste all selected items |
+| `⌘⇧S` | Add selected item(s) to the active collection |
 | `O` | Open selected URL in browser |
 | `Esc` | Close panel / preview |
 | `⌘⌫` | Delete selected item |
@@ -109,7 +111,7 @@ npm run release:mac
 | Double-click | Copy to clipboard (or auto-paste if enabled) |
 | Right-click | Copy to clipboard (or auto-paste if enabled) |
 | Drag | Drag item into other apps |
-| Click star icon | Pin/unpin item |
+| Click star icon | Save/unsave item |
 | Click × icon | Delete item |
 
 ### Menu Bar

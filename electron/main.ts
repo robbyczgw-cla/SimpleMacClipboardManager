@@ -4,9 +4,10 @@ import { fileURLToPath, pathToFileURL } from 'url'
 import { exec, execFile } from 'child_process'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs'
 import { v4 as uuidv4 } from 'uuid'
-import type { ClipboardItem, ClipboardItemType, ClipboardItemMetadata, Settings } from '../common/types'
+import type { ClipboardItem, ClipboardItemType, ClipboardItemMetadata, Collection, Settings } from '../common/types'
 import { defaultSettings, DEFAULT_IGNORED_TYPES, SETTINGS_BOUNDS } from '../common/defaults'
 import { addCapturedItem, compareItems, isItemSaved, limitHistory } from '../common/history'
+import { addItemToCollection, removeItemFromCollection as removeItemFromCollectionState } from '../common/collections'
 import { getBitmapFingerprint } from '../common/image-fingerprint'
 import { isPathWithinDirectory } from '../common/paths'
 import { createDefaultSavedCollection, DEFAULT_SAVED_COLLECTION_ID } from '../common/migrations'
@@ -525,25 +526,128 @@ function toggleSavedItem(rawId: unknown) {
   if (!item) return
 
   const saving = !isItemSaved(item)
-  const collectionIds = new Set(item.collectionIds || [])
   if (saving) {
-    collectionIds.add(DEFAULT_SAVED_COLLECTION_ID)
     if (!repository.collections.some(collection => collection.id === DEFAULT_SAVED_COLLECTION_ID)) {
       repository.saveCollections([...repository.collections, createDefaultSavedCollection()])
     }
   }
-  else collectionIds.delete(DEFAULT_SAVED_COLLECTION_ID)
 
   const history = historyCache.map(entry => entry.id === item.id
-    ? {
-        ...entry,
-        pinned: saving,
-        savedAt: saving ? Date.now() : undefined,
-        collectionIds: [...collectionIds]
-      }
+    ? saving
+      ? addItemToCollection(entry, DEFAULT_SAVED_COLLECTION_ID)
+      : removeItemFromCollectionState(entry, DEFAULT_SAVED_COLLECTION_ID)
     : entry
   )
   applyHistoryUpdate(history.sort(compareItems))
+  notifyCollectionsUpdated()
+}
+
+function notifyCollectionsUpdated() {
+  if (mainWindow?.isVisible()) {
+    mainWindow.webContents.send('collections-updated', repository.collections)
+  }
+}
+
+function getCollectionById(rawId: unknown) {
+  if (!isSafeId(rawId)) return null
+  return repository.collections.find(collection => collection.id === rawId) || null
+}
+
+function normalizeCollectionName(rawName: unknown): string | null {
+  if (typeof rawName !== 'string') return null
+  const name = rawName.trim().replace(/\s+/g, ' ').slice(0, 120)
+  return name.length > 0 ? name : null
+}
+
+function validateImportedCollection(raw: unknown): Collection | null {
+  if (!raw || typeof raw !== 'object') return null
+  const value = raw as Record<string, unknown>
+  if (!isSafeId(value.id) || typeof value.name !== 'string') return null
+  const name = normalizeCollectionName(value.name)
+  if (!name) return null
+  const createdAt = typeof value.createdAt === 'number' && Number.isFinite(value.createdAt) ? value.createdAt : Date.now()
+  return {
+    id: value.id,
+    name,
+    createdAt,
+    updatedAt: typeof value.updatedAt === 'number' && Number.isFinite(value.updatedAt) ? value.updatedAt : createdAt,
+    sortOrder: typeof value.sortOrder === 'number' && Number.isFinite(value.sortOrder) ? value.sortOrder : 0,
+    system: value.id === DEFAULT_SAVED_COLLECTION_ID
+  }
+}
+
+function createCollection(rawName: unknown) {
+  const name = normalizeCollectionName(rawName)
+  if (!name) return null
+  if (repository.collections.some(collection => collection.name.toLowerCase() === name.toLowerCase())) return null
+
+  const now = Date.now()
+  const collection = {
+    id: uuidv4(),
+    name,
+    createdAt: now,
+    updatedAt: now,
+    sortOrder: repository.collections.length,
+    system: false
+  }
+  repository.saveCollections([...repository.collections, collection])
+  notifyCollectionsUpdated()
+  return collection
+}
+
+function renameCollection(rawId: unknown, rawName: unknown): boolean {
+  const collection = getCollectionById(rawId)
+  const name = normalizeCollectionName(rawName)
+  if (!collection || collection.system || !name) return false
+  if (repository.collections.some(other => other.id !== collection.id && other.name.toLowerCase() === name.toLowerCase())) return false
+
+  repository.saveCollections(repository.collections.map(other => other.id === collection.id
+    ? { ...other, name, updatedAt: Date.now() }
+    : other
+  ))
+  notifyCollectionsUpdated()
+  return true
+}
+
+function deleteCollection(rawId: unknown): boolean {
+  const collection = getCollectionById(rawId)
+  if (!collection || collection.system) return false
+
+  repository.saveCollections(repository.collections.filter(other => other.id !== collection.id))
+  const history = historyCache.map(item => item.collectionIds?.includes(collection.id)
+    ? { ...item, collectionIds: item.collectionIds?.filter(id => id !== collection.id) }
+    : item
+  )
+  applyHistoryUpdate(history)
+  notifyCollectionsUpdated()
+  return true
+}
+
+function assignItemsToCollection(rawItemIds: unknown, rawCollectionId: unknown) {
+  const collection = getCollectionById(rawCollectionId)
+  if (!collection || !Array.isArray(rawItemIds)) return
+  const itemIds = new Set(rawItemIds.filter((id): id is string => isSafeId(id)).slice(0, 500))
+  if (itemIds.size === 0) return
+
+  if (!repository.collections.some(item => item.id === DEFAULT_SAVED_COLLECTION_ID)) {
+    repository.saveCollections([...repository.collections, createDefaultSavedCollection()])
+  }
+
+  const history = historyCache.map(item => {
+    if (!itemIds.has(item.id)) return item
+    return addItemToCollection(item, collection.id)
+  })
+  applyHistoryUpdate(history.sort(compareItems))
+  notifyCollectionsUpdated()
+}
+
+function removeItemFromCollection(rawItemId: unknown, rawCollectionId: unknown) {
+  const collection = getCollectionById(rawCollectionId)
+  const item = getItemById(rawItemId)
+  if (!collection || !item) return
+
+  const updated = removeItemFromCollectionState(item, collection.id)
+  applyHistoryUpdate(historyCache.map(entry => entry.id === item.id ? updated : entry).sort(compareItems))
 }
 
 // Validate/normalize a single item from an imported JSON file before it crosses
@@ -1069,6 +1173,16 @@ app.whenReady().then(() => {
 
   // IPC handlers
   ipcMain.handle('get-history', () => historyCache)
+  ipcMain.handle('get-collections', () => repository.collections)
+  ipcMain.handle('create-collection', (_, name: unknown) => createCollection(name))
+  ipcMain.handle('rename-collection', (_, id: unknown, name: unknown) => renameCollection(id, name))
+  ipcMain.handle('delete-collection', (_, id: unknown) => deleteCollection(id))
+  ipcMain.handle('assign-items-to-collection', (_, itemIds: unknown, collectionId: unknown) => {
+    assignItemsToCollection(itemIds, collectionId)
+  })
+  ipcMain.handle('remove-item-from-collection', (_, itemId: unknown, collectionId: unknown) => {
+    removeItemFromCollection(itemId, collectionId)
+  })
 
   // SECURITY: renderer requests to open external links should go through main.
   ipcMain.handle('open-external', async (_evt, url: string) => {
@@ -1250,7 +1364,11 @@ app.whenReady().then(() => {
 
     if (!result.canceled && result.filePath) {
       const fs = await import('fs')
-      fs.writeFileSync(result.filePath, JSON.stringify(history, null, 2))
+      fs.writeFileSync(result.filePath, JSON.stringify({
+        schemaVersion: 1,
+        history,
+        collections: repository.collections
+      }, null, 2))
       return { success: true, path: result.filePath }
     }
     return { success: false }
@@ -1269,24 +1387,47 @@ app.whenReady().then(() => {
         const fs = await import('fs')
         const data = fs.readFileSync(result.filePaths[0], 'utf8')
         const parsed = JSON.parse(data)
-        if (!Array.isArray(parsed)) return { success: false, error: 'Invalid JSON file' }
+        const parsedHistory = Array.isArray(parsed)
+          ? parsed
+          : parsed && typeof parsed === 'object' && Array.isArray(parsed.history)
+            ? parsed.history
+            : null
+        if (!parsedHistory) return { success: false, error: 'Invalid JSON file' }
         const settings = getSettings()
+
+        const importedCollections: Collection[] = parsed && typeof parsed === 'object' && Array.isArray(parsed.collections)
+          ? (parsed.collections as unknown[])
+            .map(validateImportedCollection)
+            .filter((collection): collection is Collection => collection !== null)
+          : []
+        const nextCollections = [...repository.collections]
+        for (const collection of importedCollections) {
+          if (nextCollections.some(existing => existing.id === collection.id || existing.name.toLowerCase() === collection.name.toLowerCase())) continue
+          nextCollections.push(collection)
+        }
+        if (!nextCollections.some(collection => collection.id === DEFAULT_SAVED_COLLECTION_ID) && parsedHistory.some((raw: any) => raw?.pinned === true || typeof raw?.savedAt === 'number')) {
+          nextCollections.push(createDefaultSavedCollection())
+        }
+        repository.saveCollections(nextCollections)
+        const knownCollectionIds = new Set(nextCollections.map(collection => collection.id))
 
         // Validate every entry; drop malformed/untrusted items. Dedupe by content
         // against existing history and within the imported batch.
         const existingContents = new Set(historyCache.map(h => h.content))
         const seen = new Set<string>()
         const newItems: ClipboardItem[] = []
-        for (const raw of parsed) {
+        for (const raw of parsedHistory) {
           const item = validateImportedItem(raw, settings)
           if (!item) continue
           if (existingContents.has(item.content) || seen.has(item.content)) continue
+          item.collectionIds = item.collectionIds?.filter(id => knownCollectionIds.has(id))
           seen.add(item.content)
           newItems.push(item)
         }
 
         const merged = limitHistory([...historyCache, ...newItems], settings.historyLimit)
         applyHistoryUpdate(merged)
+        notifyCollectionsUpdated()
         return { success: true, count: newItems.length }
       } catch (e) {
         return { success: false, error: 'Invalid JSON file' }

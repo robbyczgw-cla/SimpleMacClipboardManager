@@ -12,7 +12,7 @@ interface ClipboardCardProps {
   onDoubleClick: () => void
   onDelete: () => void
   onCopy: () => void
-  onTogglePin: () => void
+  onToggleSaved: () => void
   onPreview?: () => void
   isVertical?: boolean
   cardSize?: CardSize
@@ -56,7 +56,7 @@ function ClipboardCard({
   onDoubleClick,
   onDelete,
   onCopy,
-  onTogglePin,
+  onToggleSaved,
   onPreview,
   isVertical = false,
   cardSize = 'medium',
@@ -185,7 +185,7 @@ function ClipboardCard({
           ? 'glass-card-selected border-[var(--accent)]/50'
           : 'glass-card card-glow border-[var(--border-color)] hover:bg-[var(--card-hover)] hover:border-[var(--border-strong)]'
         }
-        ${item.pinned ? 'ring-1 ring-[var(--warning)]/40' : ''}
+        ${item.pinned || item.savedAt !== undefined ? 'ring-1 ring-[var(--warning)]/40' : ''}
         ${isMultiSelected ? 'ring-2 ring-[var(--multi-select)]/70' : ''}
       `}
     >
@@ -193,16 +193,16 @@ function ClipboardCard({
       <button
         onClick={(e) => {
           e.stopPropagation()
-          onTogglePin()
+          onToggleSaved()
         }}
         className={`absolute top-2 left-2 w-6 h-6 rounded-full bg-black/25 hover:bg-[var(--warning)]/80
                    flex items-center justify-center transition-opacity
-                   ${item.pinned ? 'text-[var(--warning)] opacity-100' : 'text-white/70 hover:text-white opacity-0 group-hover:opacity-100'}
+                   ${item.pinned || item.savedAt !== undefined ? 'text-[var(--warning)] opacity-100' : 'text-white/70 hover:text-white opacity-0 group-hover:opacity-100'}
                    ${isSelected ? 'opacity-100' : ''}`}
-        title={item.pinned ? t.unpin : t.pin}
-        aria-label={item.pinned ? t.unpin : t.pin}
+        title={item.pinned || item.savedAt !== undefined ? t.unpin : t.pin}
+        aria-label={item.pinned || item.savedAt !== undefined ? t.unpin : t.pin}
       >
-        <Icon name="star" filled={item.pinned} className="w-3.5 h-3.5" />
+        <Icon name="star" filled={item.pinned || item.savedAt !== undefined} className="w-3.5 h-3.5" />
       </button>
 
       {/* Delete button - visible on hover or when selected */}
