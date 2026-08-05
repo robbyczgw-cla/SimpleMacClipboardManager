@@ -75,6 +75,9 @@ npm run build
 
 # Package architecture-specific macOS ZIPs
 npm run release
+
+# Build both architecture-specific DMG and ZIP artifacts
+npm run release:mac
 ```
 
 ## Usage
@@ -153,7 +156,7 @@ Clipboard contents are processed and stored locally on your Mac and are never up
 
 ## Tech Stack
 
-- **Framework**: Electron
+- **Framework**: Electron 43+
 - **Frontend**: React 18 + TypeScript
 - **Build**: Vite
 - **Styling**: Tailwind CSS

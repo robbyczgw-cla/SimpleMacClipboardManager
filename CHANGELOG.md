@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Application compilation and macOS packaging now use separate npm scripts
 - Current unsigned/ad-hoc distribution wording no longer recommends removing Gatekeeper quarantine
+- Modernized the runtime and release toolchain to Electron 43.3.0 and electron-builder 26.15.3
+- Added explicit dependency-audit, watch-test and signed-release entry-point scripts
 
 ## [0.13.2] - 2026-05-29
 

@@ -36,7 +36,7 @@ Commands were run from a clean checkout of `main`:
 
 | Check | Result | Notes |
 |---|---|---|
-| `node --version` | `v24.14.0` | Container runtime; project CI uses Node 20 in the stacked workflow |
+| `node --version` | `v24.14.0` | Container runtime; the modernization workflow now uses Node 24 |
 | `npm --version` | `11.9.0` | npm emitted a non-blocking unknown `http-proxy` config warning |
 | `npm ci` | Passed after environment adjustment | npm cache and Electron download cache were redirected to writable temporary paths |
 | `npm run typecheck` | Passed | Renderer and Node/Electron TypeScript projects both passed |
@@ -121,7 +121,7 @@ Therefore, future marketing must say that clipboard contents are processed and s
 2. **The existing correctness/CI work is only in a stacked draft-PR chain.** It is not present on `main`, and the lower PR must not be blindly squashed. Address with this consolidation branch and an explicit review/merge plan.
 3. **Distribution is not release-ready.** Current builds are ad-hoc/unsigned and non-notarized. No paid launch should happen before Developer-ID, notarization and Gatekeeper verification.
 4. **Main-process authority is too broad.** Full item objects and image paths cross IPC. Address with ID-based handlers, schema validation and managed-directory checks in the migration/IPC phase.
-5. **Runtime and release baselines are incomplete.** Electron 28 is the current dependency, there is no macOS manual matrix in-repo, and the container cannot prove a macOS launch. Address with a supported Electron upgrade after the baseline is green and with a real Apple Silicon smoke test.
+5. **Runtime and release baselines are incomplete.** The original baseline used Electron 28; PR D upgrades the branch to Electron 43.3.0, but there is no macOS manual matrix in-repo and the container cannot prove a macOS launch. Address with a real Apple Silicon and Intel smoke test.
 
 ## First three implementation PRs
 

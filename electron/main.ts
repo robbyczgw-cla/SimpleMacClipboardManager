@@ -744,7 +744,7 @@ let lastImageBitmapKey = ''
 
 function getImageBitmapKey(image: Electron.NativeImage): string {
   const size = image.getSize()
-  return getBitmapFingerprint(size.width, size.height, image.getBitmap())
+  return getBitmapFingerprint(size.width, size.height, image.toBitmap())
 }
 
 function pollClipboard() {
@@ -1260,6 +1260,7 @@ app.on('will-quit', () => {
   if (clipboardPollInterval) clearInterval(clipboardPollInterval)
 })
 
-app.on('window-all-closed', (e: Event) => {
-  e.preventDefault() // Keep app running
-})
+// This is a menu-bar agent. Electron's `window-all-closed` event no longer
+// exposes a cancellable event object; simply leaving the listener empty keeps
+// the process alive while the tray remains available.
+app.on('window-all-closed', () => {})
