@@ -1,9 +1,12 @@
-import type { ClipboardItem, Collection, Settings } from '../common/types'
+import type { CaptureStatus, ClipboardItem, Collection, PauseCaptureDuration, Settings } from '../common/types'
 
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getHistory: (): Promise<ClipboardItem[]> => ipcRenderer.invoke('get-history'),
+  getCaptureStatus: (): Promise<CaptureStatus> => ipcRenderer.invoke('get-capture-status'),
+  pauseCapture: (duration: PauseCaptureDuration): Promise<void> => ipcRenderer.invoke('pause-capture', duration),
+  resumeCapture: (): Promise<void> => ipcRenderer.invoke('resume-capture'),
   getCollections: (): Promise<Collection[]> => ipcRenderer.invoke('get-collections'),
   createCollection: (name: string): Promise<Collection | null> => ipcRenderer.invoke('create-collection', name),
   renameCollection: (id: string, name: string): Promise<boolean> => ipcRenderer.invoke('rename-collection', id, name),
@@ -33,6 +36,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_: any, history: ClipboardItem[]) => callback(history)
     ipcRenderer.on('history-updated', handler)
     return () => ipcRenderer.removeListener('history-updated', handler)
+  },
+
+  onCaptureStatusUpdated: (callback: (status: CaptureStatus) => void) => {
+    const handler = (_: any, status: CaptureStatus) => callback(status)
+    ipcRenderer.on('capture-status-updated', handler)
+    return () => ipcRenderer.removeListener('capture-status-updated', handler)
   },
 
   onCollectionsUpdated: (callback: (collections: Collection[]) => void) => {

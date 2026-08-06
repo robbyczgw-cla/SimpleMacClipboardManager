@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { ClipboardItem, Collection, PanelPosition, CardSize } from './types'
+import { CaptureStatus, ClipboardItem, Collection, PanelPosition, CardSize, PauseCaptureDuration } from './types'
 import { isItemSaved } from '../common/history'
 import { getTranslations, Language } from './i18n/translations'
 import { fuzzyScore } from './utils/fuzzy'
@@ -29,6 +29,7 @@ function App() {
   const [collections, setCollections] = useState<Collection[]>([])
   const [shelfView, setShelfView] = useState<ShelfView>('recent')
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null)
+  const [captureStatus, setCaptureStatus] = useState<CaptureStatus>({ paused: false, pausedUntil: null })
 
   const t = useMemo(() => getTranslations(language), [language])
 
@@ -48,6 +49,7 @@ function App() {
     // Load initial history and settings
     window.electronAPI.getHistory().then(setHistory)
     window.electronAPI.getCollections().then(setCollections)
+    window.electronAPI.getCaptureStatus().then(setCaptureStatus)
     window.electronAPI.getSettings().then(applySettings)
 
     // Listen for updates
@@ -60,18 +62,21 @@ function App() {
       // The main process only pushes history while visible, so re-sync on open.
       window.electronAPI.getHistory().then(setHistory)
       window.electronAPI.getCollections().then(setCollections)
+      window.electronAPI.getCaptureStatus().then(setCaptureStatus)
       window.electronAPI.getSettings().then(applySettings)
     })
     const unsubHidden = window.electronAPI.onPanelHidden(() => {
       setIsVisible(false)
     })
     const unsubCollections = window.electronAPI.onCollectionsUpdated(setCollections)
+    const unsubCaptureStatus = window.electronAPI.onCaptureStatusUpdated(setCaptureStatus)
 
     return () => {
       unsubHistory()
       unsubShown()
       unsubHidden()
       unsubCollections()
+      unsubCaptureStatus()
     }
   }, [isSettingsPage])
 
@@ -127,6 +132,14 @@ function App() {
 
   const handleToggleSaved = useCallback((id: string) => {
     window.electronAPI.toggleSaved(id)
+  }, [])
+
+  const handlePauseCapture = useCallback((duration: PauseCaptureDuration) => {
+    window.electronAPI.pauseCapture(duration)
+  }, [])
+
+  const handleResumeCapture = useCallback(() => {
+    window.electronAPI.resumeCapture()
   }, [])
 
   const handleCreateCollection = useCallback(async () => {
@@ -380,6 +393,9 @@ function App() {
         onRenameCollection={handleRenameCollection}
         onDeleteCollection={handleDeleteCollection}
         onAssignToCollection={handleAssignToCollection}
+        captureStatus={captureStatus}
+        onPauseCapture={handlePauseCapture}
+        onResumeCapture={handleResumeCapture}
         filterType={filterType}
         onFilterChange={setFilterType}
         panelPosition={panelPosition}

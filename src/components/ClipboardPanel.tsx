@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo, useState, memo } from 'react'
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window'
-import { ClipboardItem, Collection, PanelPosition, CardSize } from '../types'
+import { CaptureStatus, ClipboardItem, Collection, PanelPosition, CardSize, PauseCaptureDuration } from '../types'
 import type { Translations } from '../i18n/translations'
 import { CARD_DIMENSIONS, CARD_GAP } from '../cardSizes'
 import ClipboardCard from './ClipboardCard'
@@ -31,6 +31,9 @@ interface ClipboardPanelProps {
   onRenameCollection: () => void
   onDeleteCollection: () => void
   onAssignToCollection: () => void
+  captureStatus: CaptureStatus
+  onPauseCapture: (duration: PauseCaptureDuration) => void
+  onResumeCapture: () => void
   filterType: FilterType
   onFilterChange: (type: FilterType) => void
   panelPosition: PanelPosition
@@ -113,6 +116,9 @@ export default function ClipboardPanel({
   onRenameCollection,
   onDeleteCollection,
   onAssignToCollection,
+  captureStatus,
+  onPauseCapture,
+  onResumeCapture,
   filterType,
   onFilterChange,
   panelPosition,
@@ -245,6 +251,33 @@ export default function ClipboardPanel({
           )}
           {selectedCollectionId && (
             <button type="button" onClick={onAssignToCollection} className="shrink-0 rounded-lg bg-[var(--accent)]/15 px-2 py-1 text-xs text-[var(--accent)]" aria-label={t.addToCollection}>⌘⇧S</button>
+          )}
+          {captureStatus.paused ? (
+            <button
+              type="button"
+              onClick={onResumeCapture}
+              className="shrink-0 rounded-lg bg-[var(--warning)]/20 px-2 py-1 text-xs text-[var(--warning)]"
+              aria-label={t.resumeCapture}
+            >
+              {t.capturePaused}
+            </button>
+          ) : (
+            <select
+              value=""
+              onChange={event => {
+                const value = event.target.value
+                if (value === 'indefinite') onPauseCapture('indefinite')
+                else if (value === '5') onPauseCapture(5)
+                else if (value === '30') onPauseCapture(30)
+              }}
+              aria-label={t.pauseCapture}
+              className="min-w-0 max-w-32 rounded-lg border border-[var(--border-color)] bg-[var(--card-hover)] px-2 py-1 text-xs text-[var(--text-secondary)] outline-none"
+            >
+              <option value="">{t.pauseCapture}</option>
+              <option value="5">{t.pauseFor5Minutes}</option>
+              <option value="30">{t.pauseFor30Minutes}</option>
+              <option value="indefinite">{t.pauseIndefinitely}</option>
+            </select>
           )}
         </div>
 
