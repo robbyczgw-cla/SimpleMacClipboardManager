@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo, useState, memo } from 'react'
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window'
-import { ClipboardItem, PanelPosition, CardSize } from '../types'
+import { ClipboardItem, Collection, PanelPosition, CardSize } from '../types'
 import type { Translations } from '../i18n/translations'
 import { CARD_DIMENSIONS, CARD_GAP } from '../cardSizes'
 import ClipboardCard from './ClipboardCard'
@@ -8,6 +8,7 @@ import SearchBar from './SearchBar'
 import { Icon } from './icons'
 
 type FilterType = 'all' | ClipboardItem['type']
+type ShelfView = 'recent' | 'saved' | 'collection'
 
 interface ClipboardPanelProps {
   items: ClipboardItem[]
@@ -19,8 +20,17 @@ interface ClipboardPanelProps {
   onToggleSelect: (id: string, shiftKey: boolean) => void
   onPaste: (item: ClipboardItem) => void
   onDelete: (id: string) => void
-  onTogglePin: (id: string) => void
+  onToggleSaved: (id: string) => void
   onPreview: (item: ClipboardItem) => void
+  shelfView: ShelfView
+  collections: Collection[]
+  selectedCollectionId: string | null
+  onShelfViewChange: (view: ShelfView) => void
+  onCollectionChange: (id: string | null) => void
+  onCreateCollection: () => void
+  onRenameCollection: () => void
+  onDeleteCollection: () => void
+  onAssignToCollection: () => void
   filterType: FilterType
   onFilterChange: (type: FilterType) => void
   panelPosition: PanelPosition
@@ -39,7 +49,7 @@ interface RowData {
   onToggleSelect: (id: string, shiftKey: boolean) => void
   onPaste: (item: ClipboardItem) => void
   onDelete: (id: string) => void
-  onTogglePin: (id: string) => void
+  onToggleSaved: (id: string) => void
   onPreview: (item: ClipboardItem) => void
 }
 
@@ -68,7 +78,7 @@ const Row = memo(function Row({ index, style, data }: ListChildComponentProps<Ro
         onDoubleClick={() => data.onPaste(item)}
         onDelete={() => data.onDelete(item.id)}
         onCopy={() => data.onPaste(item)}
-        onTogglePin={() => data.onTogglePin(item.id)}
+        onToggleSaved={() => data.onToggleSaved(item.id)}
         onPreview={() => data.onPreview(item)}
         isVertical={data.isVertical}
         cardSize={data.cardSize}
@@ -92,8 +102,17 @@ export default function ClipboardPanel({
   onToggleSelect,
   onPaste,
   onDelete,
-  onTogglePin,
+  onToggleSaved,
   onPreview,
+  shelfView,
+  collections,
+  selectedCollectionId,
+  onShelfViewChange,
+  onCollectionChange,
+  onCreateCollection,
+  onRenameCollection,
+  onDeleteCollection,
+  onAssignToCollection,
   filterType,
   onFilterChange,
   panelPosition,
@@ -153,9 +172,9 @@ export default function ClipboardPanel({
     onToggleSelect,
     onPaste,
     onDelete,
-    onTogglePin,
+    onToggleSaved,
     onPreview
-  }), [items, selectedIndex, selectedIds, cardSize, isVertical, t, onSelect, onToggleSelect, onPaste, onDelete, onTogglePin, onPreview])
+  }), [items, selectedIndex, selectedIds, cardSize, isVertical, t, onSelect, onToggleSelect, onPaste, onDelete, onToggleSaved, onPreview])
 
   const selectedItem = items[selectedIndex]
 
@@ -180,6 +199,53 @@ export default function ClipboardPanel({
             isVertical={isVertical}
             t={t}
           />
+        </div>
+
+        {/* Shelf navigation stays compact so the keyboard-first panel remains fast. */}
+        <div className={`flex items-center gap-1.5 overflow-x-auto no-scrollbar ${isVertical ? 'px-3 pb-2' : 'px-5 pb-2'}`}>
+          <button
+            type="button"
+            onClick={() => {
+              onShelfViewChange('recent')
+              onCollectionChange(null)
+            }}
+            className={`shrink-0 rounded-lg px-2.5 py-1 text-xs transition-colors ${shelfView === 'recent' ? 'bg-[var(--accent)] text-white' : 'bg-[var(--card-hover)] text-[var(--text-secondary)]'}`}
+            aria-pressed={shelfView === 'recent'}
+          >
+            {t.recent}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onShelfViewChange('saved')
+              onCollectionChange(null)
+            }}
+            className={`shrink-0 rounded-lg px-2.5 py-1 text-xs transition-colors ${shelfView === 'saved' ? 'bg-[var(--accent)] text-white' : 'bg-[var(--card-hover)] text-[var(--text-secondary)]'}`}
+            aria-pressed={shelfView === 'saved'}
+          >
+            {t.saved}
+          </button>
+          <select
+            value={shelfView === 'collection' ? selectedCollectionId || '' : ''}
+            onChange={event => onCollectionChange(event.target.value || null)}
+            aria-label="Collection"
+            className="min-w-0 max-w-32 rounded-lg border border-[var(--border-color)] bg-[var(--card-hover)] px-2 py-1 text-xs text-[var(--text-secondary)] outline-none"
+          >
+            <option value="">{t.collections}</option>
+            {collections.map(collection => (
+              <option key={collection.id} value={collection.id}>{collection.name}</option>
+            ))}
+          </select>
+          <button type="button" onClick={onCreateCollection} className="shrink-0 rounded-lg bg-[var(--card-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]" aria-label="Create collection">+</button>
+          {shelfView === 'collection' && selectedCollectionId && !collections.find(collection => collection.id === selectedCollectionId)?.system && (
+            <>
+              <button type="button" onClick={onRenameCollection} className="shrink-0 rounded-lg bg-[var(--card-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]" aria-label={t.renameCollection}>{t.renameCollection}</button>
+              <button type="button" onClick={onDeleteCollection} className="shrink-0 rounded-lg bg-[var(--card-hover)] px-2 py-1 text-xs text-[var(--text-secondary)]" aria-label={t.deleteCollection}>{t.deleteCollection}</button>
+            </>
+          )}
+          {selectedCollectionId && (
+            <button type="button" onClick={onAssignToCollection} className="shrink-0 rounded-lg bg-[var(--accent)]/15 px-2 py-1 text-xs text-[var(--accent)]" aria-label={t.addToCollection}>⌘⇧S</button>
+          )}
         </div>
 
         {/* Clipboard items - Virtualized */}

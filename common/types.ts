@@ -76,6 +76,12 @@ export interface Settings {
 
 export interface ElectronAPI {
   getHistory: () => Promise<ClipboardItem[]>
+  getCollections: () => Promise<Collection[]>
+  createCollection: (name: string) => Promise<Collection | null>
+  renameCollection: (id: string, name: string) => Promise<boolean>
+  deleteCollection: (id: string) => Promise<boolean>
+  assignItemsToCollection: (itemIds: string[], collectionId: string) => Promise<void>
+  removeItemFromCollection: (itemId: string, collectionId: string) => Promise<void>
   pasteItem: (itemId: string) => Promise<void>
   pastePlain: (itemId: string) => Promise<void>
   copyOnly: (itemId: string) => Promise<void>
@@ -96,6 +102,7 @@ export interface ElectronAPI {
   getImageDragPath?: (itemId: string) => Promise<{ success: boolean; path?: string; mime?: string; filename?: string }>
 
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => () => void
+  onCollectionsUpdated: (callback: (collections: Collection[]) => void) => () => void
   onPanelShown: (callback: () => void) => () => void
   onPanelHidden: (callback: () => void) => () => void
   onOpenSettings: (callback: () => void) => () => void

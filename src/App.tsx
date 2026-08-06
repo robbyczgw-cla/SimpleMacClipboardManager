@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { ClipboardItem, PanelPosition, CardSize } from './types'
+import { ClipboardItem, Collection, PanelPosition, CardSize } from './types'
+import { isItemSaved } from '../common/history'
 import { getTranslations, Language } from './i18n/translations'
 import { fuzzyScore } from './utils/fuzzy'
 import { Icon } from './components/icons'
@@ -8,6 +9,7 @@ import SettingsPage from './components/SettingsPage'
 import PreviewModal from './components/PreviewModal'
 
 type FilterType = 'all' | ClipboardItem['type']
+type ShelfView = 'recent' | 'saved' | 'collection'
 
 const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape'])
 
@@ -24,6 +26,9 @@ function App() {
   const [cardSize, setCardSize] = useState<CardSize>('medium')
   const [language, setLanguage] = useState<Language>('en')
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [collections, setCollections] = useState<Collection[]>([])
+  const [shelfView, setShelfView] = useState<ShelfView>('recent')
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null)
 
   const t = useMemo(() => getTranslations(language), [language])
 
@@ -42,6 +47,7 @@ function App() {
 
     // Load initial history and settings
     window.electronAPI.getHistory().then(setHistory)
+    window.electronAPI.getCollections().then(setCollections)
     window.electronAPI.getSettings().then(applySettings)
 
     // Listen for updates
@@ -53,16 +59,19 @@ function App() {
       setSelectedIds(new Set()) // Clear multi-select
       // The main process only pushes history while visible, so re-sync on open.
       window.electronAPI.getHistory().then(setHistory)
+      window.electronAPI.getCollections().then(setCollections)
       window.electronAPI.getSettings().then(applySettings)
     })
     const unsubHidden = window.electronAPI.onPanelHidden(() => {
       setIsVisible(false)
     })
+    const unsubCollections = window.electronAPI.onCollectionsUpdated(setCollections)
 
     return () => {
       unsubHistory()
       unsubShown()
       unsubHidden()
+      unsubCollections()
     }
   }, [isSettingsPage])
 
@@ -72,16 +81,24 @@ function App() {
   // stable, so equal scores keep their recency order.
   const filteredHistory = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    const base = filterType === 'all' ? history : history.filter(item => item.type === filterType)
+    const shelfItems = shelfView === 'saved'
+      ? history.filter(isItemSaved)
+      : shelfView === 'collection' && selectedCollectionId
+        ? history.filter(item => item.collectionIds?.includes(selectedCollectionId))
+        : history.filter(item => !isItemSaved(item))
+    const base = filterType === 'all' ? shelfItems : shelfItems.filter(item => item.type === filterType)
     if (!q) return base
     const scored: { item: ClipboardItem; score: number }[] = []
     for (const item of base) {
-      const score = fuzzyScore(q, item.searchText)
+      const itemCollections = (item.collectionIds || [])
+        .map(id => collections.find(collection => collection.id === id)?.name || '')
+        .join(' ')
+      const score = fuzzyScore(q, `${item.searchText} ${itemCollections} ${(item.tags || []).join(' ')}`)
       if (score > 0) scored.push({ item, score })
     }
     scored.sort((a, b) => b.score - a.score)
     return scored.map(s => s.item)
-  }, [history, filterType, searchQuery])
+  }, [history, filterType, searchQuery, shelfView, selectedCollectionId, collections])
 
   // Brief flash before the window hides to confirm the action
   const flashCopied = useCallback((id: string) => {
@@ -108,9 +125,59 @@ function App() {
     window.electronAPI.deleteItem(id)
   }, [])
 
-  const handleTogglePin = useCallback((id: string) => {
-    window.electronAPI.togglePin(id)
+  const handleToggleSaved = useCallback((id: string) => {
+    window.electronAPI.toggleSaved(id)
   }, [])
+
+  const handleCreateCollection = useCallback(async () => {
+    const name = window.prompt('New collection name')
+    if (!name) return
+    const collection = await window.electronAPI.createCollection(name)
+    if (collection) {
+      setShelfView('collection')
+      setSelectedCollectionId(collection.id)
+    }
+  }, [])
+
+  const handleRenameCollection = useCallback(async () => {
+    if (!selectedCollectionId) return
+    const collection = collections.find(item => item.id === selectedCollectionId)
+    if (!collection || collection.system) return
+    const name = window.prompt('Rename collection', collection.name)
+    if (name) await window.electronAPI.renameCollection(collection.id, name)
+  }, [collections, selectedCollectionId])
+
+  const handleDeleteCollection = useCallback(async () => {
+    if (!selectedCollectionId) return
+    const collection = collections.find(item => item.id === selectedCollectionId)
+    if (!collection || collection.system) return
+    if (window.confirm(`Delete collection “${collection.name}”? Items will be kept.`)) {
+      const deleted = await window.electronAPI.deleteCollection(collection.id)
+      if (deleted) {
+        setShelfView('recent')
+        setSelectedCollectionId(null)
+      }
+    }
+  }, [collections, selectedCollectionId])
+
+  const handleAssignToCollection = useCallback(() => {
+    if (!selectedCollectionId) return
+    const ids = selectedIds.size > 0
+      ? [...selectedIds]
+      : filteredHistory[selectedIndex]
+        ? [filteredHistory[selectedIndex].id]
+        : []
+    if (ids.length === 0) return
+    const allAssigned = shelfView === 'collection' && ids.every(id =>
+      history.find(item => item.id === id)?.collectionIds?.includes(selectedCollectionId)
+    )
+    if (allAssigned) {
+      void Promise.all(ids.map(id => window.electronAPI.removeItemFromCollection(id, selectedCollectionId)))
+    } else {
+      window.electronAPI.assignItemsToCollection(ids, selectedCollectionId)
+    }
+    setSelectedIds(new Set())
+  }, [filteredHistory, history, selectedCollectionId, selectedIds, selectedIndex, shelfView])
 
   // Toggle item in multi-select
   const handleToggleSelect = useCallback((id: string, shiftKey: boolean) => {
@@ -231,6 +298,13 @@ function App() {
           handleMergePaste()
         }
         break
+      // Cmd+Shift+S assigns the selected item(s) to the active collection.
+      case 's':
+        if ((e.metaKey || e.ctrlKey) && e.shiftKey) {
+          e.preventDefault()
+          handleAssignToCollection()
+        }
+        break
       // Cmd+A = Toggle current item in multi-select (when not typing in search)
       case 'a':
         if (e.metaKey || e.ctrlKey) {
@@ -249,7 +323,7 @@ function App() {
         }
         break
     }
-  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleCopyOnly, handleDelete, previewItem, pasteDirectly, selectedIds, handleMergePaste, handleToggleSelect])
+  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleCopyOnly, handleDelete, previewItem, pasteDirectly, selectedIds, handleMergePaste, handleToggleSelect, handleAssignToCollection])
 
   useEffect(() => {
     if (isSettingsPage) return
@@ -292,8 +366,20 @@ function App() {
         onToggleSelect={handleToggleSelect}
         onPaste={pasteDirectly ? handlePaste : handleCopyOnly}
         onDelete={handleDelete}
-        onTogglePin={handleTogglePin}
+        onToggleSaved={handleToggleSaved}
         onPreview={setPreviewItem}
+        shelfView={shelfView}
+        collections={collections}
+        selectedCollectionId={selectedCollectionId}
+        onShelfViewChange={setShelfView}
+        onCollectionChange={(id) => {
+          setSelectedCollectionId(id)
+          if (id) setShelfView('collection')
+        }}
+        onCreateCollection={handleCreateCollection}
+        onRenameCollection={handleRenameCollection}
+        onDeleteCollection={handleDeleteCollection}
+        onAssignToCollection={handleAssignToCollection}
         filterType={filterType}
         onFilterChange={setFilterType}
         panelPosition={panelPosition}

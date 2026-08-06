@@ -16,6 +16,12 @@ export interface Translations {
   clipboardEmpty: string
   emptyHint: string
   noMatchHint: string
+  recent: string
+  saved: string
+  collections: string
+  renameCollection: string
+  deleteCollection: string
+  addToCollection: string
 
   // Types
   all: string
@@ -138,6 +144,12 @@ const en: Translations = {
   clipboardEmpty: 'Clipboard history is empty',
   emptyHint: 'Copy something to get started',
   noMatchHint: 'Try a different search or filter',
+  recent: 'Recent',
+  saved: 'Saved',
+  collections: 'Collections',
+  renameCollection: 'Rename',
+  deleteCollection: 'Delete',
+  addToCollection: 'Add to collection',
 
   all: 'All',
   text: 'Text',
@@ -254,6 +266,12 @@ const es: Translations = {
   clipboardEmpty: 'El historial está vacío',
   emptyHint: 'Copia algo para empezar',
   noMatchHint: 'Prueba otra búsqueda o filtro',
+  recent: 'Recientes',
+  saved: 'Guardado',
+  collections: 'Colecciones',
+  renameCollection: 'Renombrar',
+  deleteCollection: 'Eliminar',
+  addToCollection: 'Añadir a la colección',
 
   all: 'Todo',
   text: 'Texto',
@@ -370,6 +388,12 @@ const fr: Translations = {
   clipboardEmpty: "L'historique est vide",
   emptyHint: 'Copiez quelque chose pour commencer',
   noMatchHint: 'Essayez une autre recherche ou un filtre',
+  recent: 'Récents',
+  saved: 'Enregistrés',
+  collections: 'Collections',
+  renameCollection: 'Renommer',
+  deleteCollection: 'Supprimer',
+  addToCollection: 'Ajouter à la collection',
 
   all: 'Tout',
   text: 'Texte',
@@ -486,6 +510,12 @@ const de: Translations = {
   clipboardEmpty: 'Zwischenablage ist leer',
   emptyHint: 'Kopiere etwas, um zu starten',
   noMatchHint: 'Andere Suche oder Filter versuchen',
+  recent: 'Zuletzt',
+  saved: 'Gespeichert',
+  collections: 'Sammlungen',
+  renameCollection: 'Umbenennen',
+  deleteCollection: 'Löschen',
+  addToCollection: 'Zur Sammlung hinzufügen',
 
   all: 'Alle',
   text: 'Text',
@@ -602,6 +632,12 @@ const zh: Translations = {
   clipboardEmpty: '剪贴板历史为空',
   emptyHint: '复制内容即可开始',
   noMatchHint: '尝试其他搜索或筛选',
+  recent: '最近',
+  saved: '已保存',
+  collections: '收藏夹',
+  renameCollection: '重命名',
+  deleteCollection: '删除',
+  addToCollection: '添加到收藏夹',
 
   all: '全部',
   text: '文本',

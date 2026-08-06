@@ -1,9 +1,15 @@
-import type { ClipboardItem, Settings } from '../common/types'
+import type { ClipboardItem, Collection, Settings } from '../common/types'
 
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getHistory: (): Promise<ClipboardItem[]> => ipcRenderer.invoke('get-history'),
+  getCollections: (): Promise<Collection[]> => ipcRenderer.invoke('get-collections'),
+  createCollection: (name: string): Promise<Collection | null> => ipcRenderer.invoke('create-collection', name),
+  renameCollection: (id: string, name: string): Promise<boolean> => ipcRenderer.invoke('rename-collection', id, name),
+  deleteCollection: (id: string): Promise<boolean> => ipcRenderer.invoke('delete-collection', id),
+  assignItemsToCollection: (itemIds: string[], collectionId: string): Promise<void> => ipcRenderer.invoke('assign-items-to-collection', itemIds, collectionId),
+  removeItemFromCollection: (itemId: string, collectionId: string): Promise<void> => ipcRenderer.invoke('remove-item-from-collection', itemId, collectionId),
   pasteItem: (itemId: string): Promise<void> => ipcRenderer.invoke('paste-item', itemId),
   pastePlain: (itemId: string): Promise<void> => ipcRenderer.invoke('paste-plain', itemId),
   copyOnly: (itemId: string): Promise<void> => ipcRenderer.invoke('copy-only', itemId),
@@ -27,6 +33,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_: any, history: ClipboardItem[]) => callback(history)
     ipcRenderer.on('history-updated', handler)
     return () => ipcRenderer.removeListener('history-updated', handler)
+  },
+
+  onCollectionsUpdated: (callback: (collections: Collection[]) => void) => {
+    const handler = (_: any, collections: Collection[]) => callback(collections)
+    ipcRenderer.on('collections-updated', handler)
+    return () => ipcRenderer.removeListener('collections-updated', handler)
   },
 
   onPanelShown: (callback: () => void) => {
