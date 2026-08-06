@@ -111,7 +111,7 @@ jobs:
 
       - name: Generate SHA-256 checksums
         working-directory: release
-        run: shasum -a 256 *.dmg *.zip > SHA256SUMS.txt
+        run: shasum -a 256 ./*.dmg ./*.zip > SHA256SUMS.txt
 
       - name: Create draft release
         uses: softprops/action-gh-release@v2
