@@ -10,7 +10,7 @@ Scope: commercializing `SimpleMacClipboardManager` without a rewrite
 | R-003 | An imported or stale external image path could be deleted during cleanup | High | Medium | Only delete paths contained in managed `userData/images`; test managed and external paths | In progress |
 | R-004 | PRs #9–#11 are stacked draft branches and can be merged in the wrong order | High | Medium | Use a consolidation branch; leave old PRs open until replacement is accepted | In progress |
 | R-005 | `main` has no test script and no CI workflow | High | High | Consolidate Vitest and minimal-permission CI before feature work | In progress |
-| R-006 | Electron 28 and current build dependencies need a supported-release review | High | Medium | Upgrade only after Phase 1 baseline and document official compatibility changes | Open |
+| R-006 | Electron and build dependencies need a supported-release review | High | Medium | Electron 43.3.0/electron-builder 26.15.3 upgrade is isolated in PR D; continue tracking manual macOS validation and future support updates | Mitigated / monitor |
 | R-007 | Current artifacts are ad-hoc/unsigned and not notarized | High | Certain | Keep commercial launch blocked until Developer-ID, notarization, staple and Gatekeeper checks pass | Open |
 | R-008 | Container builds cannot prove a real macOS app launch | Medium | Certain | Run manual Apple Silicon and Intel smoke tests on real Macs before release | Open |
 | R-009 | Renderer-supplied full item objects are trusted by paste/copy IPC handlers | High | Medium | Move to ID-based main-process lookup and payload validation in the migration/IPC phase | Open |
