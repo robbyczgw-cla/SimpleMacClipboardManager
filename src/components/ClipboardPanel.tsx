@@ -194,7 +194,7 @@ export default function ClipboardPanel({
 
   return (
     <div className={`fixed inset-0 flex ${positionClasses[panelPosition]} ${animationClasses[panelPosition]}`}>
-      <div className={`glass flex flex-col ${isVertical ? 'h-full' : ''}`}>
+      <div className="glass flex h-full min-h-0 flex-col">
         {/* Search bar */}
         <div className={isVertical ? 'px-3 pt-5 pb-2' : 'px-5 pt-5 pb-2'}>
           <SearchBar
@@ -284,8 +284,8 @@ export default function ClipboardPanel({
         {/* Clipboard items - Virtualized */}
         <div
           ref={containerRef}
-          className={`flex-1 ${isVertical ? 'overflow-hidden' : 'px-5 pb-3 pt-2'}`}
-          style={{ minHeight: isVertical ? 0 : 190 }}
+          className={`min-h-0 flex-1 ${isVertical ? 'overflow-hidden' : 'px-5 pb-3 pt-2'}`}
+          style={{ minHeight: 0 }}
         >
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center w-full h-full gap-3 text-center px-6">
