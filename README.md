@@ -6,6 +6,10 @@
 
 A free, visual clipboard manager for macOS. Keep your clipboard history organized and accessible.
 
+> Working product direction: a local-first visual Clipboard Shelf for Mac. The
+> final commercial name is intentionally not fixed yet; `ClipShelf` is only an
+> internal placeholder.
+
 ![macOS](https://img.shields.io/badge/macOS-000000?style=flat&logo=apple&logoColor=white)
 ![Electron](https://img.shields.io/badge/Electron-47848F?style=flat&logo=electron&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black)
@@ -34,6 +38,7 @@ A free, visual clipboard manager for macOS. Keep your clipboard history organize
 - **Multi-Language** - Available in English, Spanish, French, German, and Chinese
 - **Dark/Light Mode** - Automatically adapts to your system theme
 - **Live Settings** - Most settings apply instantly without restart
+- **First-run Onboarding** - Understand local storage, choose a hotkey, and opt into Direct Paste
 - **Local Only** - All data stays on your Mac, no cloud sync
 - **Privacy Focused** - Ignores password managers automatically
 - **Responsive** - Virtualized history rendering and menu-bar operation
@@ -147,6 +152,9 @@ Access settings via menu bar → Settings:
 
 ### Privacy
 - **Ignore password managers** - Don't capture from 1Password, Bitwarden, etc.
+- **Recent retention** - Keep Recent items forever, or expire them after 1, 7, or 30 days. Saved items are exempt.
+- **Ignored apps** - Add one macOS bundle identifier or exact display name per line. Bundle IDs are preferred.
+- **Pause capture** - Use the panel, menu bar, or tray menu to pause capture for 5 minutes, 30 minutes, or indefinitely. Pause is intentionally reset when the app restarts.
 
 ## Privacy
 
@@ -155,6 +163,9 @@ Clipboard contents are processed and stored locally on your Mac and are never up
 - Images are stored under the app's local user-data directory
 - Optional URL favicons can request small icon images from Google when enabled
 - Opening a link is an explicit user action and uses the system's external browser
+- Pause capture advances clipboard fingerprints without saving new items; it does not delete existing history.
+- App exclusions use the cached frontmost app identity and are best-effort; sensitive pasteboard markers remain ignored independently.
+- JSON exports contain clipboard data and should be handled like sensitive backups. The app does not claim secure erase on APFS/SSD storage.
 
 ## Tech Stack
 

@@ -6,6 +6,7 @@ import { fuzzyScore } from './utils/fuzzy'
 import { Icon } from './components/icons'
 import ClipboardPanel from './components/ClipboardPanel'
 import SettingsPage from './components/SettingsPage'
+import OnboardingPage from './components/OnboardingPage'
 import PreviewModal from './components/PreviewModal'
 
 type FilterType = 'all' | ClipboardItem['type']
@@ -35,9 +36,10 @@ function App() {
 
   // Check if we're in settings mode (hash routing)
   const isSettingsPage = window.location.hash === '#settings'
+  const isOnboardingPage = window.location.hash === '#onboarding'
 
   useEffect(() => {
-    if (isSettingsPage) return // Don't load clipboard stuff for settings page
+    if (isSettingsPage || isOnboardingPage) return // Don't load clipboard stuff for settings/onboarding pages
 
     const applySettings = (settings: { panelPosition?: PanelPosition; pasteDirectly?: boolean; cardSize?: CardSize; language?: Language }) => {
       setPanelPosition(settings.panelPosition || 'bottom')
@@ -78,7 +80,7 @@ function App() {
       unsubCollections()
       unsubCaptureStatus()
     }
-  }, [isSettingsPage])
+  }, [isSettingsPage, isOnboardingPage])
 
   // PERFORMANCE: memoize so the filter (and the keydown callback that depends on
   // it) is only recomputed when its inputs change — not on every render/keystroke.
@@ -339,10 +341,10 @@ function App() {
   }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleCopyOnly, handleDelete, previewItem, pasteDirectly, selectedIds, handleMergePaste, handleToggleSelect, handleAssignToCollection])
 
   useEffect(() => {
-    if (isSettingsPage) return
+    if (isSettingsPage || isOnboardingPage) return
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleKeyDown, isSettingsPage])
+  }, [handleKeyDown, isSettingsPage, isOnboardingPage])
 
   // Reset selection when the result set changes shape.
   useEffect(() => {
@@ -365,6 +367,9 @@ function App() {
   // Render settings page if hash is #settings
   if (isSettingsPage) {
     return <SettingsPage />
+  }
+  if (isOnboardingPage) {
+    return <OnboardingPage />
   }
 
   return (
