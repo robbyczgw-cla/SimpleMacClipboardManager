@@ -4,11 +4,12 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getHistory: (): Promise<ClipboardItem[]> => ipcRenderer.invoke('get-history'),
-  pasteItem: (item: ClipboardItem): Promise<void> => ipcRenderer.invoke('paste-item', item),
-  pastePlain: (item: ClipboardItem): Promise<void> => ipcRenderer.invoke('paste-plain', item),
-  copyOnly: (item: ClipboardItem): Promise<void> => ipcRenderer.invoke('copy-only', item),
+  pasteItem: (itemId: string): Promise<void> => ipcRenderer.invoke('paste-item', itemId),
+  pastePlain: (itemId: string): Promise<void> => ipcRenderer.invoke('paste-plain', itemId),
+  copyOnly: (itemId: string): Promise<void> => ipcRenderer.invoke('copy-only', itemId),
   deleteItem: (id: string): Promise<void> => ipcRenderer.invoke('delete-item', id),
   togglePin: (id: string): Promise<void> => ipcRenderer.invoke('toggle-pin', id),
+  toggleSaved: (id: string): Promise<void> => ipcRenderer.invoke('toggle-saved', id),
   clearHistory: (): Promise<void> => ipcRenderer.invoke('clear-history'),
   hideWindow: (): Promise<void> => ipcRenderer.invoke('hide-window'),
   getSettings: (): Promise<Settings> => ipcRenderer.invoke('get-settings'),
@@ -20,7 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   copyText: (text: string): Promise<void> => ipcRenderer.invoke('copy-text', text),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
-  getImageDragPath: (item: ClipboardItem) => ipcRenderer.invoke('get-image-drag-path', item),
+  getImageDragPath: (itemId: string) => ipcRenderer.invoke('get-image-drag-path', itemId),
 
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => {
     const handler = (_: any, history: ClipboardItem[]) => callback(history)

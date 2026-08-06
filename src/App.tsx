@@ -91,17 +91,17 @@ function App() {
 
   const handlePaste = useCallback((item: ClipboardItem) => {
     flashCopied(item.id)
-    window.electronAPI.pasteItem(item)
+    window.electronAPI.pasteItem(item.id)
   }, [flashCopied])
 
   const handlePastePlain = useCallback((item: ClipboardItem) => {
     flashCopied(item.id)
-    window.electronAPI.pastePlain(item)
+    window.electronAPI.pastePlain(item.id)
   }, [flashCopied])
 
   const handleCopyOnly = useCallback((item: ClipboardItem) => {
     flashCopied(item.id)
-    window.electronAPI.copyOnly(item)
+    window.electronAPI.copyOnly(item.id)
   }, [flashCopied])
 
   const handleDelete = useCallback((id: string) => {

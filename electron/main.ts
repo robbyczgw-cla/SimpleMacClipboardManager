@@ -4,25 +4,22 @@ import { fileURLToPath, pathToFileURL } from 'url'
 import { exec, execFile } from 'child_process'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs'
 import { v4 as uuidv4 } from 'uuid'
-import Store from 'electron-store'
 import type { ClipboardItem, ClipboardItemType, ClipboardItemMetadata, Settings } from '../common/types'
 import { defaultSettings, DEFAULT_IGNORED_TYPES, SETTINGS_BOUNDS } from '../common/defaults'
-import { addCapturedItem, compareItems, limitHistory } from '../common/history'
+import { addCapturedItem, compareItems, isItemSaved, limitHistory } from '../common/history'
 import { getBitmapFingerprint } from '../common/image-fingerprint'
 import { isPathWithinDirectory } from '../common/paths'
+import { createDefaultSavedCollection, DEFAULT_SAVED_COLLECTION_ID } from '../common/migrations'
+import { isSafeId } from '../common/ids'
+import { StoreRepository } from './repositories/store-repository'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const store = new Store<{ history: ClipboardItem[], settings: Settings }>({
-  defaults: {
-    history: [],
-    settings: defaultSettings
-  }
-})
+const repository = new StoreRepository(defaultSettings)
 
 // In-memory cache so we can debounce disk writes without losing consistency.
-let historyCache: ClipboardItem[] = store.get('history')
+let historyCache: ClipboardItem[] = repository.history
 let pendingHistorySave: ReturnType<typeof setTimeout> | null = null
 let lastSoundTime = 0
 
@@ -96,7 +93,7 @@ function applyHistoryUpdate(next: ClipboardItem[]) {
   // PERFORMANCE: debounce disk writes to reduce electron-store churn.
   if (pendingHistorySave) clearTimeout(pendingHistorySave)
   pendingHistorySave = setTimeout(() => {
-    store.set('history', historyCache)
+    repository.saveHistory(historyCache)
     pendingHistorySave = null
   }, 400)
 }
@@ -154,7 +151,7 @@ function migrateHistoryImagesToDisk() {
 
   if (changed) {
     historyCache = migrated
-    store.set('history', historyCache)
+    repository.saveHistory(historyCache)
   }
 }
 
@@ -179,7 +176,7 @@ let _settingsCache: Settings | null = null
 
 function getSettings(): Settings {
   if (_settingsCache) return _settingsCache
-  _settingsCache = store.get('settings') || defaultSettings
+  _settingsCache = repository.settings || defaultSettings
   return _settingsCache
 }
 
@@ -410,11 +407,11 @@ function toggleWindow() {
 }
 
 function clearHistory() {
-  // Remove any persisted image files before clearing.
-  for (const item of historyCache) deleteImageFileForItem(item)
-  historyCache = []
-  store.set('history', [])
-  if (mainWindow?.isVisible()) mainWindow.webContents.send('history-updated', [])
+  const retained = historyCache.filter(isItemSaved)
+  for (const item of historyCache) {
+    if (!isItemSaved(item)) deleteImageFileForItem(item)
+  }
+  applyHistoryUpdate(retained)
 }
 
 // Move an item to the top of history (when pasted/copied from our app).
@@ -427,10 +424,10 @@ function moveItemToTop(id: string) {
 
   const moved = { ...historyCache[itemIndex], createdAt: Date.now() }
   const rest = historyCache.filter(h => h.id !== id)
-  const pinned = rest.filter(h => h.pinned)
-  const unpinned = rest.filter(h => !h.pinned)
+  const pinned = rest.filter(isItemSaved)
+  const unpinned = rest.filter(item => !isItemSaved(item))
 
-  const updated = moved.pinned
+  const updated = isItemSaved(moved)
     ? [moved, ...pinned, ...unpinned]
     : [...pinned, moved, ...unpinned]
 
@@ -518,6 +515,36 @@ function detectContentType(text: string): ClipboardItem['type'] {
 }
 
 const VALID_ITEM_TYPES: ClipboardItemType[] = ['text', 'image', 'link', 'file', 'color']
+function getItemById(rawId: unknown): ClipboardItem | null {
+  if (!isSafeId(rawId)) return null
+  return historyCache.find(item => item.id === rawId) || null
+}
+
+function toggleSavedItem(rawId: unknown) {
+  const item = getItemById(rawId)
+  if (!item) return
+
+  const saving = !isItemSaved(item)
+  const collectionIds = new Set(item.collectionIds || [])
+  if (saving) {
+    collectionIds.add(DEFAULT_SAVED_COLLECTION_ID)
+    if (!repository.collections.some(collection => collection.id === DEFAULT_SAVED_COLLECTION_ID)) {
+      repository.saveCollections([...repository.collections, createDefaultSavedCollection()])
+    }
+  }
+  else collectionIds.delete(DEFAULT_SAVED_COLLECTION_ID)
+
+  const history = historyCache.map(entry => entry.id === item.id
+    ? {
+        ...entry,
+        pinned: saving,
+        savedAt: saving ? Date.now() : undefined,
+        collectionIds: [...collectionIds]
+      }
+    : entry
+  )
+  applyHistoryUpdate(history.sort(compareItems))
+}
 
 // Validate/normalize a single item from an imported JSON file before it crosses
 // the trust boundary into the store and the renderer DOM. Returns a clean item
@@ -550,6 +577,18 @@ function validateImportedItem(raw: any, settings: Settings): ClipboardItem | nul
       ? raw.createdAt
       : Date.now()
   const pinned = !!raw.pinned
+  const savedAt = typeof raw.savedAt === 'number' && Number.isFinite(raw.savedAt)
+    ? raw.savedAt
+    : pinned ? createdAt : undefined
+  const collectionIds = Array.isArray(raw.collectionIds)
+    ? raw.collectionIds.filter((id: unknown): id is string => isSafeId(id))
+    : []
+  if (savedAt !== undefined && !collectionIds.includes(DEFAULT_SAVED_COLLECTION_ID)) {
+    collectionIds.unshift(DEFAULT_SAVED_COLLECTION_ID)
+  }
+  const tags = Array.isArray(raw.tags)
+    ? raw.tags.filter((tag: unknown): tag is string => typeof tag === 'string' && tag.trim().length > 0).slice(0, 100)
+    : []
 
   if (type === 'image') {
     // Re-persist inline image data; a cross-machine imagePath won't resolve.
@@ -572,6 +611,9 @@ function validateImportedItem(raw: any, settings: Settings): ClipboardItem | nul
           },
           createdAt,
           searchText: 'image screenshot',
+          savedAt,
+          collectionIds,
+          tags,
           pinned
         }
       } catch {
@@ -592,6 +634,9 @@ function validateImportedItem(raw: any, settings: Settings): ClipboardItem | nul
         metadata: { ...metadata, imagePath: md.imagePath, imageKey: typeof md.imageKey === 'string' ? md.imageKey : undefined },
         createdAt,
         searchText: 'image screenshot',
+        savedAt,
+        collectionIds,
+        tags,
         pinned
       }
     }
@@ -611,6 +656,9 @@ function validateImportedItem(raw: any, settings: Settings): ClipboardItem | nul
     metadata,
     createdAt,
     searchText,
+    savedAt,
+    collectionIds,
+    tags,
     pinned
   }
 }
@@ -946,7 +994,7 @@ function applySettings(settings: Settings) {
     } catch {
       // nothing else we can do
     }
-    store.set('settings', settings)
+    repository.saveSettings(settings)
     invalidateSettingsCache()
   }
 
@@ -1035,11 +1083,16 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('get-image-drag-path', async (_evt, item: ClipboardItem) => {
+  ipcMain.handle('get-image-drag-path', async (_evt, itemId: unknown) => {
     try {
-      if (item.type !== 'image') return { success: false }
+      const item = getItemById(itemId)
+      if (!item || item.type !== 'image') return { success: false }
 
-      if (item.metadata.imagePath && existsSync(item.metadata.imagePath)) {
+      if (
+        item.metadata.imagePath &&
+        isPathWithinDirectory(item.metadata.imagePath, getImagesDir()) &&
+        existsSync(item.metadata.imagePath)
+      ) {
         return {
           success: true,
           path: pathToFileURL(item.metadata.imagePath).toString(),
@@ -1067,7 +1120,9 @@ app.whenReady().then(() => {
       return { success: false }
     }
   })
-  ipcMain.handle('paste-item', (_, item: ClipboardItem) => {
+  ipcMain.handle('paste-item', (_, itemId: unknown) => {
+    const item = getItemById(itemId)
+    if (!item) return
     if (item.type === 'image') {
       // For images, write the image to clipboard (file-based preferred).
       const img = item.metadata.imagePath
@@ -1089,7 +1144,9 @@ app.whenReady().then(() => {
     activateAndPaste(previousApp)
   })
 
-  ipcMain.handle('paste-plain', (_, item: ClipboardItem) => {
+  ipcMain.handle('paste-plain', (_, itemId: unknown) => {
+    const item = getItemById(itemId)
+    if (!item) return
     // Paste as plain text. Most clipboard content we capture is already plain text,
     // but we keep this handler for explicit "paste without formatting" requests.
     const plainText = item.type === 'image' ? '[Image]' : item.content
@@ -1106,7 +1163,9 @@ app.whenReady().then(() => {
     activateAndPaste(previousApp)
   })
 
-  ipcMain.handle('copy-only', (_, item: ClipboardItem) => {
+  ipcMain.handle('copy-only', (_, itemId: unknown) => {
+    const item = getItemById(itemId)
+    if (!item) return
     // Copy to clipboard without auto-pasting
     if (item.type === 'image') {
       const img = item.metadata.imagePath
@@ -1135,19 +1194,20 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('delete-item', (_, id: string) => {
-    const toDelete = historyCache.find(h => h.id === id)
-    if (toDelete) deleteImageFileForItem(toDelete)
+    const toDelete = getItemById(id)
+    if (!toDelete) return
+    deleteImageFileForItem(toDelete)
 
     const history = historyCache.filter(h => h.id !== id)
     applyHistoryUpdate(history)
   })
 
   ipcMain.handle('toggle-pin', (_, id: string) => {
-    const history = historyCache.map(h =>
-      h.id === id ? { ...h, pinned: !h.pinned } : h
-    )
-    history.sort(compareItems)
-    applyHistoryUpdate(history)
+    toggleSavedItem(id)
+  })
+
+  ipcMain.handle('toggle-saved', (_, id: string) => {
+    toggleSavedItem(id)
   })
 
   ipcMain.handle('clear-history', clearHistory)
@@ -1171,7 +1231,7 @@ app.whenReady().then(() => {
       systemPreferences.isTrustedAccessibilityClient(true)
     }
 
-    store.set('settings', clean)
+    repository.saveSettings(clean)
     invalidateSettingsCache()
     applySettings(clean)
   })
@@ -1243,7 +1303,7 @@ app.on('will-quit', () => {
   if (pendingHistorySave) {
     clearTimeout(pendingHistorySave)
     pendingHistorySave = null
-    store.set('history', historyCache)
+    repository.saveHistory(historyCache)
   }
 
   const settings = getSettings()
@@ -1252,7 +1312,7 @@ app.on('will-quit', () => {
   if (settings.clearOnQuit) {
     for (const item of historyCache) deleteImageFileForItem(item)
     historyCache = []
-    store.set('history', [])
+    repository.saveHistory([])
     console.log('History cleared on quit')
   }
 
