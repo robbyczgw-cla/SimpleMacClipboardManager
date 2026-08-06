@@ -7,6 +7,9 @@ import { v4 as uuidv4 } from 'uuid'
 import Store from 'electron-store'
 import type { ClipboardItem, ClipboardItemType, ClipboardItemMetadata, Settings } from '../common/types'
 import { defaultSettings, DEFAULT_IGNORED_TYPES, SETTINGS_BOUNDS } from '../common/defaults'
+import { addCapturedItem, compareItems, limitHistory } from '../common/history'
+import { getBitmapFingerprint } from '../common/image-fingerprint'
+import { isPathWithinDirectory } from '../common/paths'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -35,6 +38,10 @@ function deleteImageFileForItem(item: ClipboardItem) {
   if (item.type !== 'image') return
   const imagePath = item.metadata.imagePath
   if (!imagePath) return
+  if (!isPathWithinDirectory(imagePath, getImagesDir())) {
+    console.warn('Refusing to delete image outside managed directory:', imagePath)
+    return
+  }
   try {
     if (existsSync(imagePath)) unlinkSync(imagePath)
   } catch (e) {
@@ -46,12 +53,12 @@ function applyHistoryUpdate(next: ClipboardItem[]) {
   // Cleanup removed image files (best-effort)
   const previousPaths = new Set(
     historyCache
-      .filter(i => i.type === 'image' && i.metadata.imagePath)
+      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, getImagesDir()))
       .map(i => i.metadata.imagePath as string)
   )
   const nextPaths = new Set(
     next
-      .filter(i => i.type === 'image' && i.metadata.imagePath)
+      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, getImagesDir()))
       .map(i => i.metadata.imagePath as string)
   )
   for (const p of previousPaths) {
@@ -410,15 +417,6 @@ function clearHistory() {
   if (mainWindow?.isVisible()) mainWindow.webContents.send('history-updated', [])
 }
 
-// Total, STABLE ordering for history: pinned first, then newest first, with an
-// id tiebreaker so items sharing a createdAt (same ms / imported) never shuffle
-// their neighbours when something unrelated is pinned/unpinned.
-function compareItems(a: ClipboardItem, b: ClipboardItem): number {
-  if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1
-  if (b.createdAt !== a.createdAt) return b.createdAt - a.createdAt
-  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
-}
-
 // Move an item to the top of history (when pasted/copied from our app).
 // Builds a fresh item object (never mutates the cached one) and uses an O(n)
 // partition that keeps pinned items first while preserving their order — no
@@ -495,7 +493,7 @@ function showAbout() {
     message: 'SimpleMacClipboardManager',
     detail: `Version ${version}
 
-A free, lightweight clipboard manager for macOS.
+A visual, privacy-focused clipboard manager for macOS.
 Keep your clipboard history organized and accessible.
 
 Created by @robbyczgw-cla`,
@@ -581,7 +579,11 @@ function validateImportedItem(raw: any, settings: Settings): ClipboardItem | nul
       }
     }
     // Accept an on-disk path only if it actually exists on this machine.
-    if (typeof md.imagePath === 'string' && existsSync(md.imagePath)) {
+    if (
+      typeof md.imagePath === 'string' &&
+      isPathWithinDirectory(md.imagePath, getImagesDir()) &&
+      existsSync(md.imagePath)
+    ) {
       return {
         id: typeof raw.id === 'string' && raw.id ? raw.id : uuidv4(),
         type: 'image',
@@ -736,14 +738,13 @@ function startClipboardPolling() {
   console.log('Clipboard polling started with interval:', settings.pollingInterval)
 }
 
-// Track last image by bitmap size + byte-length — far cheaper than toDataURL()
-// which performs a full PNG encode on every poll cycle.
+// Track the last image by a real content fingerprint. Bitmap byte length alone
+// is only width * height * channels, so different same-size screenshots collided.
 let lastImageBitmapKey = ''
 
 function getImageBitmapKey(image: Electron.NativeImage): string {
   const size = image.getSize()
-  const bitmap = image.getBitmap()
-  return `${size.width}x${size.height}:${bitmap.byteLength}`
+  return getBitmapFingerprint(size.width, size.height, image.getBitmap())
 }
 
 function pollClipboard() {
@@ -791,8 +792,10 @@ function pollClipboard() {
         pinned: false
       }
 
-      const filtered = historyCache.filter(h => h.content !== text)
-      const updated = [item, ...filtered].slice(0, settings.historyLimit)
+      const updated = addCapturedItem(historyCache, item, {
+        historyLimit: settings.historyLimit,
+        ignoreDuplicates: settings.ignoreDuplicates
+      })
       applyHistoryUpdate(updated)
       return
     }
@@ -802,8 +805,8 @@ function pollClipboard() {
     const image = clipboard.readImage()
 
     if (!image.isEmpty()) {
-      // Use bitmap dimensions + byte-length for change detection instead of
-      // toDataURL() which does a full PNG encode every cycle.
+      // Use a decoded bitmap fingerprint for change detection instead of
+      // toDataURL(), which performs a full PNG encode every poll cycle.
       const bitmapKey = getImageBitmapKey(image)
 
       if (bitmapKey !== lastImageBitmapKey && bitmapKey !== '0x0:0') {
@@ -855,12 +858,10 @@ function pollClipboard() {
           pinned: false
         }
 
-        // Remove any older copy of the same image so its orphaned file is cleaned
-        // up by applyHistoryUpdate's path diff (mirrors the text branch's filter).
-        const deduped = historyCache.filter(
-          h => !(h.type === 'image' && h.metadata.imageKey === bitmapKey)
-        )
-        const updated = [item, ...deduped].slice(0, settings.historyLimit)
+        const updated = addCapturedItem(historyCache, item, {
+          historyLimit: settings.historyLimit,
+          ignoreDuplicates: settings.ignoreDuplicates
+        })
         applyHistoryUpdate(updated)
       }
     }
@@ -1156,7 +1157,20 @@ app.whenReady().then(() => {
   ipcMain.handle('get-settings', () => getSettings())
 
   ipcMain.handle('save-settings', (_, newSettings: Settings) => {
+    const previous = getSettings()
     const clean = sanitizeSettings(newSettings)
+
+    // Electron globalShortcut does not need Accessibility permission, but the
+    // optional direct-paste flow uses System Events to simulate Cmd+V. Ask only
+    // when that feature is enabled instead of alarming every user at startup.
+    if (
+      process.platform === 'darwin' &&
+      clean.pasteDirectly &&
+      !previous.pasteDirectly
+    ) {
+      systemPreferences.isTrustedAccessibilityClient(true)
+    }
+
     store.set('settings', clean)
     invalidateSettingsCache()
     applySettings(clean)
@@ -1211,9 +1225,8 @@ app.whenReady().then(() => {
           newItems.push(item)
         }
 
-        const merged = [...historyCache, ...newItems]
-        merged.sort(compareItems)
-        applyHistoryUpdate(merged.slice(0, settings.historyLimit))
+        const merged = limitHistory([...historyCache, ...newItems], settings.historyLimit)
+        applyHistoryUpdate(merged)
         return { success: true, count: newItems.length }
       } catch (e) {
         return { success: false, error: 'Invalid JSON file' }

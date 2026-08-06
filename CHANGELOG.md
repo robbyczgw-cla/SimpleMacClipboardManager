@@ -5,6 +5,47 @@ All notable changes to SimpleMacClipboardManager will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Consolidated clipboard correctness, CI and accessibility/release work from draft PRs #9–#11
+- Image duplicate identities now use decoded bitmap SHA-256 fingerprints
+- History updates never delete image files outside the app-managed images directory
+
+### Changed
+- Application compilation and macOS packaging now use separate npm scripts
+- Current unsigned/ad-hoc distribution wording no longer recommends removing Gatekeeper quarantine
+
+## [0.13.2] - 2026-05-29
+
+### Added
+- Settings and Quit actions are reachable directly from the clipboard panel
+
+### Fixed
+- Settings reliably comes to the foreground for the menu-bar agent
+
+## [0.13.1] - 2026-05-29
+
+### Fixed
+- Run as a proper `LSUIElement` menu-bar agent without a Dock flash
+- Preserve the optional Show in Dock setting
+
+## [0.13.0] - 2026-05-29
+
+### Added
+- Fuzzy search and a recordable global hotkey
+- Complete translations across all five supported languages
+
+### Changed
+- Refined the liquid-glass UI, accessibility semantics, and renderer performance
+
+### Security
+- Added a production Content Security Policy and navigation guard
+- Hardened imports, external links, settings validation, and AppleScript execution
+
+### Fixed
+- Preview, search-input, image-deduplication, selection, and clipboard recapture bugs
+
 ## [0.12.0] - 2026-03-13
 
 ### Added

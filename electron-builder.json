@@ -17,7 +17,9 @@
     }
   ],
   "mac": {
-    "target": ["dir"],
+    "target": [
+      "dir"
+    ],
     "category": "public.app-category.productivity",
     "icon": "build/icon.icns",
     "identity": null,
@@ -40,5 +42,6 @@
         "path": "/Applications"
       }
     ]
-  }
+  },
+  "artifactName": "${productName}-${version}-${arch}.${ext}"
 }

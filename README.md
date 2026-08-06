@@ -4,7 +4,7 @@
 
 # SimpleMacClipboardManager
 
-A free, lightweight clipboard manager for macOS. Keep your clipboard history organized and accessible.
+A free, visual clipboard manager for macOS. Keep your clipboard history organized and accessible.
 
 ![macOS](https://img.shields.io/badge/macOS-000000?style=flat&logo=apple&logoColor=white)
 ![Electron](https://img.shields.io/badge/Electron-47848F?style=flat&logo=electron&logoColor=white)
@@ -35,7 +35,7 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 - **Live Settings** - Most settings apply instantly without restart
 - **Local Only** - All data stays on your Mac, no cloud sync
 - **Privacy Focused** - Ignores password managers automatically
-- **Lightweight** - Minimal resource usage, runs in menu bar
+- **Responsive** - Virtualized history rendering and menu-bar operation
 - **Liquid Glass Design** - Modern macOS-inspired translucent UI with blur effects
 - **Drag & Drop** - Drag items directly into other apps
 - **Merge Paste** - Multi-select with Shift+click, then ⌘M to paste all together
@@ -48,14 +48,14 @@ A free, lightweight clipboard manager for macOS. Keep your clipboard history org
 
 ### Download (Recommended)
 
-1. Download the latest `.zip` from [GitHub Releases](../../releases)
+1. Download the latest architecture-specific `.zip` from [GitHub Releases](../../releases):
+   - `arm64` for Apple Silicon Macs
+   - `x64` for Intel Macs
 2. Unzip and drag `SimpleMacClipboardManager.app` to `/Applications`
-3. **First launch** (required for unsigned apps):
-   - Right-click the app → **Open** → **Open**
-   - Or run in Terminal: `xattr -cr /Applications/SimpleMacClipboardManager.app`
-4. Grant **Accessibility** permission when prompted (required for global hotkey)
+3. **First launch**: current GitHub artifacts are not Developer-ID signed and not notarized (they may be ad-hoc/unsigned), so macOS may require the normal Finder confirmation via right-click → **Open**. Commercial release artifacts will be Developer-ID signed and notarized; no quarantine-removal command is part of the supported installation flow.
+4. Accessibility permission is requested only when you enable **Paste directly**. The global hotkey and copy-only mode do not require it.
 
-> **Note**: This app is self-signed (not notarized with Apple). macOS will warn you on first launch - this is normal for open-source apps distributed outside the App Store.
+> **Note**: Current GitHub builds are not Developer-ID signed or notarized by Apple, so macOS can warn on first launch.
 
 ### Build from Source
 
@@ -70,10 +70,10 @@ npm install
 # Run in development mode
 npm run dev
 
-# Build for production (creates app in /release folder)
+# Build the renderer, Electron main process and preload bundles
 npm run build
 
-# Build release with self-signing and zip
+# Package architecture-specific macOS ZIPs
 npm run release
 ```
 
@@ -145,14 +145,15 @@ Access settings via menu bar → Settings:
 
 ## Privacy
 
-SimpleMacClipboardManager is completely local:
-- No data is sent to any server
-- No analytics or telemetry
-- All clipboard data is stored locally
+Clipboard contents are processed and stored locally on your Mac and are never uploaded by the app:
+- No account, cloud clipboard, analytics or telemetry
+- Images are stored under the app's local user-data directory
+- Optional URL favicons can request small icon images from Google when enabled
+- Opening a link is an explicit user action and uses the system's external browser
 
 ## Tech Stack
 
-- **Framework**: Electron 28+
+- **Framework**: Electron
 - **Frontend**: React 18 + TypeScript
 - **Build**: Vite
 - **Styling**: Tailwind CSS
@@ -177,7 +178,7 @@ SimpleMacClipboardManager was inspired by [Maccy](https://github.com/p0deje/Macc
 | **Paste as Plain Text** | Yes | Yes |
 | **Password Manager Ignore** | Yes | Yes |
 | **Dark/Light Mode** | Auto (system) | Auto (system) |
-| **Memory Usage** | ~100-150MB (Electron) | ~15-30MB (native) |
+| **Memory Usage** | Electron-based; measure before making a numeric claim | ~15-30MB (native) |
 | **Native Feel** | Good (vibrancy blur) | Excellent (AppKit) |
 | **Customization** | Panel position, hotkey | Extensive |
 | **Open Source** | Yes (MIT) | Yes (MIT) |
