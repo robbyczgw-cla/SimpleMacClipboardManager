@@ -1,6 +1,6 @@
 {
   "name": "simple-mac-clipboard-manager",
-  "version": "0.13.2",
+  "version": "0.14.0",
   "type": "module",
   "description": "A visual, privacy-focused clipboard manager for macOS",
   "main": "dist-electron/main.js",
@@ -51,5 +51,8 @@
     "vite-plugin-electron": "^0.28.0",
     "vite-plugin-electron-renderer": "^0.14.0",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "fast-uri": "3.1.5"
   }
 }

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-08-06
+
 ### Fixed
 - Consolidated clipboard correctness, CI and accessibility/release work from draft PRs #9–#11
 - Image duplicate identities now use decoded bitmap SHA-256 fingerprints
@@ -21,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added explicit dependency-audit, watch-test and signed-release entry-point scripts
 - Added schema versioning, migration backups and a repository boundary around local persistence
 - Added a durable Saved Shelf, custom Collections, ID-based collection IPC and collection-preserving export/import
+
+### Security
+- Pinned the transitive `fast-uri` build dependency to patched version 3.1.5.
 
 ## [0.13.2] - 2026-05-29
 

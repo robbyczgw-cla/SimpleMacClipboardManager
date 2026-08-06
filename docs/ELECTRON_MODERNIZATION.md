@@ -39,15 +39,13 @@ npm run dependency:outdated
 npm ls
 ```
 
-The current non-development audit still reports `fast-uri` through the
-`electron-store`/`conf` dependency chain. It is not application code and has no
-known reachable path from the app's settings usage; it remains tracked as an
-upstream dependency issue rather than being hidden with a blanket override.
+The current non-development audit is clean. The transitive
+`fast-uri` dependency used by the build tooling is pinned to patched version
+3.1.5 through the package override. Keep `npm run dependency:audit` in the
+release gate so future lockfile changes cannot reintroduce the finding.
 
 The older DOMPurify, UUID and Electron-builder findings were addressed by the
-targeted upgrades above. A future dependency PR can revisit the remaining
-transitive finding when the upstream package range provides a compatible fix.
-
+targeted upgrades above.
 ## Release script boundaries
 
 - `npm run build` compiles renderer, main and preload bundles.
