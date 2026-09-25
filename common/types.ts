@@ -12,6 +12,13 @@ export interface ClipboardItemMetadata {
   imageMime?: string
   /** Content fingerprint (dimensions + SHA-256 bitmap digest) used to dedupe images. */
   imageKey?: string
+  imageWidth?: number
+  imageHeight?: number
+  /** Thumbnail generation; bumped when the thumbnail recipe changes. */
+  thumbnailVersion?: number
+  sourceAppBundleId?: string
+  /** Absolute .app bundle path of the source app (for its icon). */
+  sourceAppPath?: string
 }
 
 export interface ClipboardItem {
@@ -116,11 +123,14 @@ export interface ElectronAPI {
   importHistory: () => Promise<{ success: boolean; count?: number; error?: string }>
   openExternal: (url: string) => Promise<{ success: boolean }>
   /** Create (or return) a temp file path for an image item (used for drag & drop). */
+  /** PNG data URL of a local .app bundle's icon, or null. */
+  getAppIcon: (appPath: string) => Promise<string | null>
   getImageDragPath?: (itemId: string) => Promise<{ success: boolean; path?: string; mime?: string; filename?: string }>
 
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => () => void
   onCaptureStatusUpdated: (callback: (status: CaptureStatus) => void) => () => void
   onCollectionsUpdated: (callback: (collections: Collection[]) => void) => () => void
+  onSettingsUpdated: (callback: (settings: Settings) => void) => () => void
   onPanelShown: (callback: () => void) => () => void
   onPanelHidden: (callback: () => void) => () => void
   onOpenSettings: (callback: () => void) => () => void

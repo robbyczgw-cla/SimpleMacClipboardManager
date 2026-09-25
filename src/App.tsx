@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useDeferredValue, useRef } from 'react'
 import { CaptureStatus, ClipboardItem, Collection, PanelPosition, CardSize, PauseCaptureDuration } from './types'
 import { isItemSaved } from '../common/history'
+import { DEFAULT_SAVED_COLLECTION_ID } from '../common/migrations'
 import { getTranslations, Language } from './i18n/translations'
 import { fuzzyScore } from './utils/fuzzy'
 import { Icon } from './components/icons'
@@ -8,11 +9,13 @@ import ClipboardPanel from './components/ClipboardPanel'
 import SettingsPage from './components/SettingsPage'
 import OnboardingPage from './components/OnboardingPage'
 import PreviewModal from './components/PreviewModal'
+import type { ShelfView } from './components/ShelfBar'
 
 type FilterType = 'all' | ClipboardItem['type']
-type ShelfView = 'recent' | 'saved' | 'collection'
 
-const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape'])
+const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape', 'Tab'])
+// Holding ⌘ this long reveals the ⌘1–⌘9 badges; quick ⌘ shortcuts don't flash them.
+const QUICK_KEY_REVEAL_MS = 350
 
 function App() {
   const [history, setHistory] = useState<ClipboardItem[]>([])
@@ -31,6 +34,11 @@ function App() {
   const [shelfView, setShelfView] = useState<ShelfView>('recent')
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null)
   const [captureStatus, setCaptureStatus] = useState<CaptureStatus>({ paused: false, pausedUntil: null })
+  const [showQuickKeys, setShowQuickKeys] = useState(false)
+  const quickKeyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Clock for relative timestamps ("3m"). Refreshed on open and every 30 s while
+  // visible, so memoized cards don't show stale ages.
+  const [now, setNow] = useState(() => Date.now())
 
   const t = useMemo(() => getTranslations(language), [language])
 
@@ -54,24 +62,28 @@ function App() {
     window.electronAPI.getCaptureStatus().then(setCaptureStatus)
     window.electronAPI.getSettings().then(applySettings)
 
-    // Listen for updates
+    // Listen for updates. The main process pushes whatever changed while the
+    // panel was hidden right BEFORE 'panel-shown', so opening needs no getters.
     const unsubHistory = window.electronAPI.onHistoryUpdated(setHistory)
     const unsubShown = window.electronAPI.onPanelShown(() => {
       setIsVisible(true)
-      setSelectedIndex(0)
-      setSearchQuery('')
-      setSelectedIds(new Set()) // Clear multi-select
-      // The main process only pushes history while visible, so re-sync on open.
-      window.electronAPI.getHistory().then(setHistory)
-      window.electronAPI.getCollections().then(setCollections)
-      window.electronAPI.getCaptureStatus().then(setCaptureStatus)
-      window.electronAPI.getSettings().then(applySettings)
+      setNow(Date.now())
     })
+    // Reset transient UI state on HIDE rather than on show, so the next open
+    // paints an already-clean panel instead of flashing the previous query.
     const unsubHidden = window.electronAPI.onPanelHidden(() => {
       setIsVisible(false)
+      setSelectedIndex(0)
+      setSearchQuery('')
+      setSelectedIds(prev => (prev.size === 0 ? prev : new Set()))
+      setPreviewItem(null)
+      if (quickKeyTimer.current) clearTimeout(quickKeyTimer.current)
+      quickKeyTimer.current = null
+      setShowQuickKeys(false)
     })
     const unsubCollections = window.electronAPI.onCollectionsUpdated(setCollections)
     const unsubCaptureStatus = window.electronAPI.onCaptureStatusUpdated(setCaptureStatus)
+    const unsubSettings = window.electronAPI.onSettingsUpdated(applySettings)
 
     return () => {
       unsubHistory()
@@ -79,15 +91,30 @@ function App() {
       unsubHidden()
       unsubCollections()
       unsubCaptureStatus()
+      unsubSettings()
     }
   }, [isSettingsPage, isOnboardingPage])
 
-  // PERFORMANCE: memoize so the filter (and the keydown callback that depends on
-  // it) is only recomputed when its inputs change — not on every render/keystroke.
-  // When a query is present, results are ranked by fuzzy relevance; the sort is
-  // stable, so equal scores keep their recency order.
+  const collectionNames = useMemo(() => new Map(collections.map(c => [c.id, c.name])), [collections])
+  const customCollections = useMemo(
+    () => collections.filter(c => !c.system && c.id !== DEFAULT_SAVED_COLLECTION_ID).sort((a, b) => a.sortOrder - b.sortOrder),
+    [collections]
+  )
+
+  // If the active collection disappears (deleted elsewhere), fall back to Recent.
+  useEffect(() => {
+    if (shelfView === 'collection' && selectedCollectionId && !collectionNames.has(selectedCollectionId)) {
+      setShelfView('recent')
+      setSelectedCollectionId(null)
+    }
+  }, [collectionNames, selectedCollectionId, shelfView])
+
+  // Typing stays responsive on large histories: the input updates immediately,
+  // the ranking catches up in a lower-priority render. Results are ranked by
+  // fuzzy relevance; the sort is stable, so equal scores keep recency order.
+  const deferredQuery = useDeferredValue(searchQuery)
   const filteredHistory = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
+    const q = deferredQuery.trim().toLowerCase()
     const shelfItems = shelfView === 'saved'
       ? history.filter(isItemSaved)
       : shelfView === 'collection' && selectedCollectionId
@@ -97,15 +124,16 @@ function App() {
     if (!q) return base
     const scored: { item: ClipboardItem; score: number }[] = []
     for (const item of base) {
-      const itemCollections = (item.collectionIds || [])
-        .map(id => collections.find(collection => collection.id === id)?.name || '')
-        .join(' ')
-      const score = fuzzyScore(q, `${item.searchText} ${itemCollections} ${(item.tags || []).join(' ')}`)
+      const itemCollections = (item.collectionIds || []).map(id => collectionNames.get(id) || '').join(' ')
+      const haystack = itemCollections || item.tags?.length
+        ? `${item.searchText} ${itemCollections} ${(item.tags || []).join(' ')}`.toLowerCase()
+        : item.searchText
+      const score = fuzzyScore(q, haystack)
       if (score > 0) scored.push({ item, score })
     }
     scored.sort((a, b) => b.score - a.score)
     return scored.map(s => s.item)
-  }, [history, filterType, searchQuery, shelfView, selectedCollectionId, collections])
+  }, [history, filterType, deferredQuery, shelfView, selectedCollectionId, collectionNames])
 
   // Brief flash before the window hides to confirm the action
   const flashCopied = useCallback((id: string) => {
@@ -144,36 +172,57 @@ function App() {
     window.electronAPI.resumeCapture()
   }, [])
 
-  const handleCreateCollection = useCallback(async () => {
-    const name = window.prompt('New collection name')
-    if (!name) return
-    const collection = await window.electronAPI.createCollection(name)
-    if (collection) {
-      setShelfView('collection')
-      setSelectedCollectionId(collection.id)
-    }
+  const showRecent = useCallback(() => {
+    setShelfView('recent')
+    setSelectedCollectionId(null)
+    setSelectedIndex(0)
   }, [])
 
-  const handleRenameCollection = useCallback(async () => {
-    if (!selectedCollectionId) return
-    const collection = collections.find(item => item.id === selectedCollectionId)
-    if (!collection || collection.system) return
-    const name = window.prompt('Rename collection', collection.name)
-    if (name) await window.electronAPI.renameCollection(collection.id, name)
-  }, [collections, selectedCollectionId])
+  const showSaved = useCallback(() => {
+    setShelfView('saved')
+    setSelectedCollectionId(null)
+    setSelectedIndex(0)
+  }, [])
 
-  const handleDeleteCollection = useCallback(async () => {
-    if (!selectedCollectionId) return
-    const collection = collections.find(item => item.id === selectedCollectionId)
+  const showCollection = useCallback((id: string) => {
+    setShelfView('collection')
+    setSelectedCollectionId(id)
+    setSelectedIndex(0)
+  }, [])
+
+  // Tab / ⇧Tab cycle Recent → Saved → each collection, keyboard-only.
+  const cycleView = useCallback((direction: 1 | -1) => {
+    const views: { view: ShelfView; id: string | null }[] = [
+      { view: 'recent', id: null },
+      { view: 'saved', id: null },
+      ...customCollections.map(c => ({ view: 'collection' as const, id: c.id }))
+    ]
+    const current = views.findIndex(v => v.view === shelfView && (v.view !== 'collection' || v.id === selectedCollectionId))
+    const next = views[(Math.max(0, current) + direction + views.length) % views.length]
+    setShelfView(next.view)
+    setSelectedCollectionId(next.id)
+    setSelectedIndex(0)
+  }, [customCollections, shelfView, selectedCollectionId])
+
+  const handleCreateCollection = useCallback(async (name: string) => {
+    const collection = await window.electronAPI.createCollection(name)
+    if (!collection) return false
+    showCollection(collection.id)
+    return true
+  }, [showCollection])
+
+  const handleRenameCollection = useCallback((id: string, name: string) => {
+    return window.electronAPI.renameCollection(id, name)
+  }, [])
+
+  const handleDeleteCollection = useCallback(async (id: string) => {
+    const collection = collections.find(item => item.id === id)
     if (!collection || collection.system) return
-    if (window.confirm(`Delete collection “${collection.name}”? Items will be kept.`)) {
-      const deleted = await window.electronAPI.deleteCollection(collection.id)
-      if (deleted) {
-        setShelfView('recent')
-        setSelectedCollectionId(null)
-      }
-    }
-  }, [collections, selectedCollectionId])
+    // confirm() is implemented by Electron (unlike prompt()).
+    if (!window.confirm(t.deleteCollectionConfirm.replace('{name}', collection.name))) return
+    const deleted = await window.electronAPI.deleteCollection(collection.id)
+    if (deleted && selectedCollectionId === id) showRecent()
+  }, [collections, selectedCollectionId, showRecent, t])
 
   const handleAssignToCollection = useCallback(() => {
     if (!selectedCollectionId) return
@@ -194,46 +243,54 @@ function App() {
     setSelectedIds(new Set())
   }, [filteredHistory, history, selectedCollectionId, selectedIds, selectedIndex, shelfView])
 
-  // Toggle item in multi-select
-  const handleToggleSelect = useCallback((id: string, shiftKey: boolean) => {
-    if (shiftKey) {
-      setSelectedIds(prev => {
-        const next = new Set(prev)
-        if (next.has(id)) {
-          next.delete(id)
-        } else {
-          next.add(id)
-        }
-        return next
-      })
-    }
+  const handleToggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }, [])
 
-  // Merge paste: combine selected text-like items with a blank-line separator.
-  // Images are skipped (their content is a file:// URL, meaningless as text).
+  // Merge paste: combine selected text-like items with a blank-line separator,
+  // in history order. Images are skipped (their content is a file:// URL).
   const handleMergePaste = useCallback(() => {
-    const selectedItems = filteredHistory.filter(item => selectedIds.has(item.id) && item.type !== 'image')
+    const selectedItems = history.filter(item => selectedIds.has(item.id) && item.type !== 'image')
     if (selectedItems.length > 0) {
-      const merged = selectedItems.map(item => item.content).join('\n\n')
-      window.electronAPI.copyText(merged)
+      window.electronAPI.copyText(selectedItems.map(item => item.content).join('\n\n'))
       setSelectedIds(new Set())
       window.electronAPI.hideWindow()
     }
-  }, [filteredHistory, selectedIds])
+  }, [history, selectedIds])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isVisible) return
 
-    // While typing in the search field, let bare Space and letters (incl. 'o')
-    // reach the input. Only intercept navigation keys and modifier shortcuts.
+    if (e.key === 'Meta' && !quickKeyTimer.current) {
+      quickKeyTimer.current = setTimeout(() => setShowQuickKeys(true), QUICK_KEY_REVEAL_MS)
+    } else if (e.key !== 'Meta' && quickKeyTimer.current) {
+      // A ⌘ shortcut is being typed — don't reveal badges mid-shortcut.
+      clearTimeout(quickKeyTimer.current)
+    }
+
     const target = e.target as HTMLElement | null
+    // Menus (collection name field etc.) own their keys.
+    if (target?.closest?.('[data-popover]')) return
+
+    // While typing in the search field, let letters reach the input. Only
+    // intercept navigation keys and modifier shortcuts. Space previews only
+    // when the query is empty — a leading space is never a useful search.
     const typing = !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
     if (typing) {
       const isModCombo = e.metaKey || e.ctrlKey
       // Cmd+A selects text in the field while typing, not multi-select.
-      if (isModCombo && (e.key === 'a' || e.key === 'A')) return
-      if (!NAV_KEYS.has(e.key) && !isModCombo) return
+      if (isModCombo && e.key.toLowerCase() === 'a') return
+      const spaceToPreview = e.key === ' ' && searchQuery === ''
+      if (!NAV_KEYS.has(e.key) && !isModCombo && !spaceToPreview) return
     }
+
+    const selected = filteredHistory[selectedIndex]
+    const mod = e.metaKey || e.ctrlKey
 
     switch (e.key) {
       case 'ArrowLeft':
@@ -246,105 +303,101 @@ function App() {
         e.preventDefault()
         setSelectedIndex(prev => Math.min(filteredHistory.length - 1, prev + 1))
         break
+      case 'Tab':
+        e.preventDefault()
+        cycleView(e.shiftKey ? -1 : 1)
+        break
       case 'Enter':
         e.preventDefault()
-        if (filteredHistory[selectedIndex]) {
-          if (e.shiftKey) {
-            // Shift+Enter = paste as plain text (always auto-paste)
-            handlePastePlain(filteredHistory[selectedIndex])
-          } else {
-            // Enter respects pasteDirectly setting
-            if (pasteDirectly) {
-              handlePaste(filteredHistory[selectedIndex])
-            } else {
-              handleCopyOnly(filteredHistory[selectedIndex])
-            }
-          }
+        if (selected) {
+          if (e.shiftKey) handlePastePlain(selected) // always auto-paste, plain
+          else if (pasteDirectly) handlePaste(selected)
+          else handleCopyOnly(selected)
         }
         break
       case 'Escape':
         e.preventDefault()
-        if (previewItem) {
-          setPreviewItem(null)
-        } else {
-          window.electronAPI.hideWindow()
-        }
+        if (previewItem) setPreviewItem(null)
+        else if (searchQuery) setSearchQuery('') // first Esc clears, second closes
+        else window.electronAPI.hideWindow()
         break
       case ' ':
         e.preventDefault()
-        if (previewItem) {
-          setPreviewItem(null)
-        } else if (filteredHistory[selectedIndex]) {
-          setPreviewItem(filteredHistory[selectedIndex])
-        }
+        if (previewItem) setPreviewItem(null)
+        else if (selected) setPreviewItem(selected)
         break
       case 'Backspace':
-        if (e.metaKey || e.ctrlKey) {
+        if (mod && selected) {
           e.preventDefault()
-          if (filteredHistory[selectedIndex]) {
-            handleDelete(filteredHistory[selectedIndex].id)
-          }
+          handleDelete(selected.id)
         }
         break
       // Quick paste shortcuts: Cmd+1 through Cmd+9
       case '1': case '2': case '3': case '4': case '5':
       case '6': case '7': case '8': case '9':
-        if (e.metaKey || e.ctrlKey) {
+        if (mod) {
           e.preventDefault()
-          const index = parseInt(e.key) - 1
-          if (filteredHistory[index]) {
-            handlePaste(filteredHistory[index])
-          }
+          const item = filteredHistory[parseInt(e.key) - 1]
+          if (item) handlePaste(item)
         }
         break
-      // Cmd+C = Copy only (no auto-paste)
-      case 'c':
-        if (e.metaKey || e.ctrlKey) {
+      default: {
+        // Shift changes e.key to upper case ("S"), so compare lowercased.
+        const key = e.key.toLowerCase()
+        if (mod && key === 'c' && selected) {
           e.preventDefault()
-          if (filteredHistory[selectedIndex]) {
-            handleCopyOnly(filteredHistory[selectedIndex])
-          }
-        }
-        break
-      // Cmd+M = Merge paste selected items
-      case 'm':
-        if ((e.metaKey || e.ctrlKey) && selectedIds.size > 0) {
+          handleCopyOnly(selected)
+        } else if (mod && key === 'm' && selectedIds.size > 0) {
           e.preventDefault()
           handleMergePaste()
-        }
-        break
-      // Cmd+Shift+S assigns the selected item(s) to the active collection.
-      case 's':
-        if ((e.metaKey || e.ctrlKey) && e.shiftKey) {
+        } else if (mod && key === 's' && e.shiftKey) {
           e.preventDefault()
           handleAssignToCollection()
-        }
-        break
-      // Cmd+A = Toggle current item in multi-select (when not typing in search)
-      case 'a':
-        if (e.metaKey || e.ctrlKey) {
+        } else if (mod && key === 's' && selected) {
           e.preventDefault()
-          if (filteredHistory[selectedIndex]) {
-            handleToggleSelect(filteredHistory[selectedIndex].id, true)
-          }
-        }
-        break
-      // O = Open link in browser (bare key; guarded above so it never fires while typing)
-      case 'o':
-        if (filteredHistory[selectedIndex]?.type === 'link') {
+          handleToggleSaved(selected.id)
+        } else if (mod && key === 'a' && selected) {
           e.preventDefault()
-          window.electronAPI.openExternal(filteredHistory[selectedIndex].content)
+          handleToggleSelect(selected.id)
+        } else if (!mod && key === 'o' && selected?.type === 'link') {
+          // Bare O; guarded above so it never fires while typing a query.
+          e.preventDefault()
+          window.electronAPI.openExternal(selected.content)
           window.electronAPI.hideWindow()
         }
-        break
+      }
     }
-  }, [isVisible, selectedIndex, filteredHistory, handlePaste, handlePastePlain, handleCopyOnly, handleDelete, previewItem, pasteDirectly, selectedIds, handleMergePaste, handleToggleSelect, handleAssignToCollection])
+  }, [isVisible, selectedIndex, filteredHistory, searchQuery, handlePaste, handlePastePlain, handleCopyOnly, handleDelete, handleToggleSaved, previewItem, pasteDirectly, selectedIds, handleMergePaste, handleToggleSelect, handleAssignToCollection, cycleView])
 
   useEffect(() => {
     if (isSettingsPage || isOnboardingPage) return
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Meta') {
+        if (quickKeyTimer.current) clearTimeout(quickKeyTimer.current)
+        quickKeyTimer.current = null
+        setShowQuickKeys(false)
+      }
+    }
+    const onBlur = () => {
+      if (quickKeyTimer.current) clearTimeout(quickKeyTimer.current)
+      quickKeyTimer.current = null
+      setShowQuickKeys(false)
+    }
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    window.addEventListener('blur', onBlur)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', onBlur)
+    }
   }, [handleKeyDown, isSettingsPage, isOnboardingPage])
+
+  useEffect(() => {
+    if (!isVisible) return
+    const timer = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(timer)
+  }, [isVisible])
 
   // Reset selection when the result set changes shape.
   useEffect(() => {
@@ -379,6 +432,7 @@ function App() {
         selectedIndex={selectedIndex}
         selectedIds={selectedIds}
         searchQuery={searchQuery}
+        highlightQuery={deferredQuery}
         onSearchChange={setSearchQuery}
         onSelect={setSelectedIndex}
         onToggleSelect={handleToggleSelect}
@@ -389,11 +443,9 @@ function App() {
         shelfView={shelfView}
         collections={collections}
         selectedCollectionId={selectedCollectionId}
-        onShelfViewChange={setShelfView}
-        onCollectionChange={(id) => {
-          setSelectedCollectionId(id)
-          if (id) setShelfView('collection')
-        }}
+        onShowRecent={showRecent}
+        onShowSaved={showSaved}
+        onShowCollection={showCollection}
         onCreateCollection={handleCreateCollection}
         onRenameCollection={handleRenameCollection}
         onDeleteCollection={handleDeleteCollection}
@@ -405,11 +457,14 @@ function App() {
         onFilterChange={setFilterType}
         panelPosition={panelPosition}
         cardSize={cardSize}
+        pasteDirectly={pasteDirectly}
+        showQuickKeys={showQuickKeys}
+        now={now}
         t={t}
       />
       {copiedId && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full glass border border-[var(--border-strong)] text-[var(--text-primary)] text-sm font-medium shadow-lg animate-fade-in pointer-events-none">
-          <Icon name="check" className="w-4 h-4 text-[var(--success)]" />
+        <div className="toast pointer-events-none fixed left-1/2 top-3 z-50 -translate-x-1/2 animate-fade-in">
+          <Icon name="check" className="h-3.5 w-3.5 text-[var(--success)]" />
           {t.copied}
         </div>
       )}

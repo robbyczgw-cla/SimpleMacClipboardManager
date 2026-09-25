@@ -2,8 +2,13 @@ import type { ClipboardItem, RetentionDays } from './types'
 import { isItemSaved } from './history'
 
 export interface ApplicationIdentity {
+  /** Lowercased process name, used for matching. */
   name: string
   bundleId?: string
+  /** Original-case name for display ("Safari", not "safari"). */
+  displayName?: string
+  /** Absolute path of the .app bundle, used to render its icon locally. */
+  path?: string
 }
 
 /** Match exact bundle IDs or exact display names entered by the user. */

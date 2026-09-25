@@ -2,6 +2,7 @@ import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, nativeImage, sc
 import { join, dirname } from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { exec, execFile } from 'child_process'
+import { createHash } from 'crypto'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import type { ApplicationIdentity } from '../common/privacy'
@@ -16,6 +17,7 @@ import { isSafeId } from '../common/ids'
 import { matchesIgnoredApplication, pruneHistory } from '../common/privacy'
 import { StoreRepository } from './repositories/store-repository'
 import { productMetadata } from '../common/product'
+import { panelThickness } from '../common/card-sizes'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -27,11 +29,16 @@ let historyCache: ClipboardItem[] = repository.history
 let pendingHistorySave: ReturnType<typeof setTimeout> | null = null
 let lastSoundTime = 0
 
+// PERFORMANCE: resolved once — applyHistoryUpdate() checks every image item
+// against this directory, so an existsSync per call added up to 2×N syscalls.
+let _imagesDir: string | null = null
 function getImagesDir(): string {
+  if (_imagesDir && existsSync(_imagesDir)) return _imagesDir
   const dir = join(app.getPath('userData'), 'images')
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true })
   }
+  _imagesDir = dir
   return dir
 }
 
@@ -52,14 +59,15 @@ function deleteImageFileForItem(item: ClipboardItem) {
 
 function applyHistoryUpdate(next: ClipboardItem[]) {
   // Cleanup removed image files (best-effort)
+  const imagesDir = getImagesDir()
   const previousPaths = new Set(
     historyCache
-      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, getImagesDir()))
+      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, imagesDir))
       .map(i => i.metadata.imagePath as string)
   )
   const nextPaths = new Set(
     next
-      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, getImagesDir()))
+      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, imagesDir))
       .map(i => i.metadata.imagePath as string)
   )
   for (const p of previousPaths) {
@@ -88,10 +96,12 @@ function applyHistoryUpdate(next: ClipboardItem[]) {
   historyCache = next
 
   // PERFORMANCE: the renderer only needs updates while the panel is visible.
-  // When hidden it re-fetches via get-history on panel-shown, so skip the
-  // (potentially large, thumbnail-laden) structured-clone on every poll capture.
+  // When hidden we just mark it stale and push once right before the next show,
+  // so a burst of background captures costs one structured-clone, not N.
   if (mainWindow?.isVisible()) {
     mainWindow.webContents.send('history-updated', historyCache)
+  } else {
+    rendererStale.history = true
   }
 
   // PERFORMANCE: debounce disk writes to reduce electron-store churn.
@@ -169,6 +179,8 @@ let previousApp = '' // Store the app that was active before opening clipboard p
 let capturePaused = false
 let capturePausedUntil: number | null = null
 let capturePauseTimer: ReturnType<typeof setTimeout> | null = null
+// What changed while the panel was hidden; flushed in syncRendererBeforeShow().
+const rendererStale = { history: false, collections: false, settings: false }
 
 function getCaptureStatus(): CaptureStatus {
   if (capturePaused && capturePausedUntil !== null && capturePausedUntil <= Date.now()) {
@@ -188,6 +200,19 @@ function isCapturePaused(): boolean {
 
 function notifyCaptureStatusUpdated() {
   if (mainWindow?.isVisible()) mainWindow.webContents.send('capture-status-updated', getCaptureStatus())
+}
+
+// Push only what changed while hidden, BEFORE 'panel-shown', so the renderer
+// already holds fresh state when the window paints — no getter round-trips (and
+// no multi-MB history clone) on the hot open path when nothing changed.
+function syncRendererBeforeShow() {
+  if (!mainWindow) return
+  const wc = mainWindow.webContents
+  if (rendererStale.history) wc.send('history-updated', historyCache)
+  if (rendererStale.collections) wc.send('collections-updated', repository.collections)
+  if (rendererStale.settings) wc.send('settings-updated', getSettings())
+  wc.send('capture-status-updated', getCaptureStatus())
+  rendererStale.history = rendererStale.collections = rendererStale.settings = false
 }
 
 function resumeCapture() {
@@ -239,7 +264,7 @@ function getWindowBounds() {
   const { x: displayX, y: displayY, width, height } = display.bounds
 
   const settings = getSettings()
-  const panelSize = 320
+  const panelSize = panelThickness(settings.panelPosition, settings.cardSize)
 
   switch (settings.panelPosition) {
     case 'top':
@@ -462,6 +487,7 @@ function toggleWindow() {
     // Show the panel IMMEDIATELY — never block the hottest path on osascript.
     const bounds = getWindowBounds()
     mainWindow.setBounds(bounds)
+    syncRendererBeforeShow()
     mainWindow.show()
     mainWindow.focus()
     mainWindow.webContents.send('panel-shown')
@@ -612,6 +638,8 @@ function toggleSavedItem(rawId: unknown) {
 function notifyCollectionsUpdated() {
   if (mainWindow?.isVisible()) {
     mainWindow.webContents.send('collections-updated', repository.collections)
+  } else {
+    rendererStale.collections = true
   }
 }
 
@@ -735,6 +763,9 @@ function validateImportedItem(raw: any, settings: Settings): ClipboardItem | nul
     fileName: typeof md.fileName === 'string' ? md.fileName : undefined,
     colorHex: typeof md.colorHex === 'string' ? md.colorHex : undefined,
     sourceApp: typeof md.sourceApp === 'string' ? md.sourceApp : undefined,
+    sourceAppBundleId: typeof md.sourceAppBundleId === 'string' ? md.sourceAppBundleId.slice(0, 200) : undefined,
+    // Only a plausible local .app path; get-app-icon validates it again.
+    sourceAppPath: typeof md.sourceAppPath === 'string' && /^\/.{1,1000}\.app$/i.test(md.sourceAppPath) ? md.sourceAppPath : undefined,
     imageMime: typeof md.imageMime === 'string' ? md.imageMime : undefined
     // NOTE: favicon and title intentionally dropped on import (arbitrary URLs).
   }
@@ -887,7 +918,7 @@ const PASSWORD_MANAGER_APPS = [
 // value synchronously and kicks a non-blocking background refresh when stale, so
 // the poll loop and panel-open path are never stalled waiting on System Events.
 const FRONTMOST_APP_SCRIPT =
-  'tell application "System Events" to tell first application process whose frontmost is true to return name & "||" & bundle identifier'
+  'tell application "System Events" to tell first application process whose frontmost is true to return name & "||" & bundle identifier & "||" & POSIX path of application file'
 let _frontmostAppCache: ApplicationIdentity = { name: '' }
 let _frontmostAppCacheTime = 0
 let _frontmostRefreshing = false
@@ -896,14 +927,16 @@ const FRONTMOST_APP_CACHE_TTL = 2000
 function refreshFrontmostApp() {
   if (_frontmostRefreshing) return
   _frontmostRefreshing = true
-  execFile('osascript', ['-e', FRONTMOST_APP_SCRIPT], { timeout: 500 }, (err, stdout) => {
+  execFile('osascript', ['-e', FRONTMOST_APP_SCRIPT], { timeout: 1000 }, (err, stdout) => {
     _frontmostRefreshing = false
     _frontmostAppCacheTime = Date.now()
     if (!err && stdout) {
-      const [name, bundleId] = stdout.trim().split('||')
+      const [name, bundleId, appPath] = stdout.trim().split('||').map(part => (part || '').trim())
       _frontmostAppCache = {
-        name: (name || '').trim().toLowerCase(),
-        bundleId: (bundleId || '').trim().toLowerCase() || undefined
+        name: name.toLowerCase(),
+        displayName: name || undefined,
+        bundleId: bundleId.toLowerCase() || undefined,
+        path: appPath ? appPath.replace(/\/$/, '') : undefined
       }
     }
   })
@@ -991,6 +1024,7 @@ function startClipboardPolling() {
   // Safely read initial clipboard content
   try {
     lastClipboardContent = clipboard.readText() || ''
+    lastRawImageSignature = readRawImageSignature()
   } catch (e) {
     console.error('Failed to read initial clipboard:', e)
     lastClipboardContent = ''
@@ -1006,6 +1040,109 @@ function startClipboardPolling() {
 // is only width * height * channels, so different same-size screenshots collided.
 let lastImageBitmapKey = ''
 
+// PERFORMANCE: Electron exposes no NSPasteboard changeCount, and decoding the
+// pasteboard image + hashing its bitmap costs ~50 ms. Doing that every poll while
+// an image merely sits on the clipboard burned ~10% of a core. Instead we hash
+// the still-encoded pasteboard bytes (sub-millisecond) and only decode when that
+// raw signature changes. Exotic flavours fall back to the decode path.
+const RAW_IMAGE_FLAVORS = ['public.png', 'public.tiff', 'public.jpeg', 'com.compuserve.gif', 'public.heic']
+let lastRawImageSignature = ''
+
+function readRawImageSignature(): string {
+  for (const flavor of RAW_IMAGE_FLAVORS) {
+    try {
+      const raw = clipboard.readBuffer(flavor)
+      if (raw.length > 0) return `${flavor}:${raw.length}:${createHash('sha1').update(raw).digest('hex')}`
+    } catch {
+      // flavour unsupported on this pasteboard — try the next one
+    }
+  }
+  return ''
+}
+
+// Called after we write to the clipboard ourselves, so the poller treats our own
+// write as already seen instead of decoding and re-capturing it.
+function markClipboardWrittenByApp(text: string) {
+  lastClipboardContent = text
+  lastImageBitmapKey = ''
+  lastRawImageSignature = readRawImageSignature()
+}
+
+// v2: aspect-preserving (v1 squashed everything into 120×120) and large enough
+// to stay crisp on Retina at the "large" card size.
+const THUMBNAIL_VERSION = 2
+const THUMBNAIL_MAX_EDGE = 280
+
+function makeThumbnail(image: Electron.NativeImage): string {
+  const { width, height } = image.getSize()
+  const scaled = width >= height
+    ? image.resize({ width: Math.min(THUMBNAIL_MAX_EDGE, width), quality: 'good' })
+    : image.resize({ height: Math.min(THUMBNAIL_MAX_EDGE, height), quality: 'good' })
+  return `data:image/jpeg;base64,${scaled.toJPEG(72).toString('base64')}`
+}
+
+// Regenerate v1 thumbnails from the full image on disk, a few at a time after
+// startup so launch is never blocked. Items without a local file are skipped.
+function upgradeLegacyThumbnails() {
+  const pending = historyCache
+    .filter(item => item.type === 'image' && (item.metadata.thumbnailVersion ?? 1) < THUMBNAIL_VERSION && item.metadata.imagePath)
+    .map(item => item.id)
+  if (pending.length === 0) return
+
+  const step = () => {
+    const batch = pending.splice(0, 4)
+    if (batch.length === 0) return
+    const updates = new Map<string, ClipboardItem>()
+    for (const id of batch) {
+      const item = historyCache.find(entry => entry.id === id)
+      const imagePath = item?.metadata.imagePath
+      if (!item || !imagePath || !isPathWithinDirectory(imagePath, getImagesDir()) || !existsSync(imagePath)) continue
+      const img = nativeImage.createFromPath(imagePath)
+      if (img.isEmpty()) continue
+      const { width, height } = img.getSize()
+      updates.set(id, {
+        ...item,
+        thumbnail: makeThumbnail(img),
+        metadata: { ...item.metadata, imageWidth: width, imageHeight: height, thumbnailVersion: THUMBNAIL_VERSION }
+      })
+    }
+    if (updates.size > 0) applyHistoryUpdate(historyCache.map(entry => updates.get(entry.id) || entry))
+    setTimeout(step, 50)
+  }
+  setTimeout(step, 1500)
+}
+
+function sourceMetadata(source: ApplicationIdentity): Pick<ClipboardItemMetadata, 'sourceApp' | 'sourceAppBundleId' | 'sourceAppPath'> {
+  return {
+    sourceApp: source.displayName || source.name || undefined,
+    sourceAppBundleId: source.bundleId,
+    sourceAppPath: source.path
+  }
+}
+
+// App icons are read from the local bundle (no network) and cached per path.
+const appIconCache = new Map<string, string | null>()
+function getAppIconDataUrl(rawPath: unknown): Promise<string | null> {
+  if (typeof rawPath !== 'string' || !rawPath.startsWith('/') || !/\.app$/i.test(rawPath) || rawPath.includes('/../') || rawPath.length > 1024) {
+    return Promise.resolve(null)
+  }
+  if (appIconCache.has(rawPath)) return Promise.resolve(appIconCache.get(rawPath) ?? null)
+  if (!existsSync(rawPath)) return Promise.resolve(null)
+  // QuickLook first: getFileIcon returns a blank placeholder for apps whose
+  // icon only lives in an Assets.car (Mail, Notes, Chrome on current macOS).
+  // Note: getFileIcon size 'large' is unsupported on macOS and aborts the process.
+  return nativeImage.createThumbnailFromPath(rawPath, { width: 64, height: 64 })
+    .then(icon => (icon.isEmpty() ? Promise.reject(new Error('empty')) : icon))
+    .catch(() => app.getFileIcon(rawPath, { size: 'normal' }))
+    .then(icon => (icon.isEmpty() ? null : icon.toDataURL()))
+    .catch(() => null)
+    .then(dataUrl => {
+      if (appIconCache.size > 300) appIconCache.clear()
+      appIconCache.set(rawPath, dataUrl)
+      return dataUrl
+    })
+}
+
 function getImageBitmapKey(image: Electron.NativeImage): string {
   const size = image.getSize()
   return getBitmapFingerprint(size.width, size.height, image.toBitmap())
@@ -1020,12 +1157,10 @@ function pollClipboard() {
 
     if (isCapturePaused()) {
       // Advance the fingerprints while paused so resuming does not silently
-      // capture content that was copied during the pause window.
+      // capture content that was copied during the pause window. The raw
+      // signature is enough — no need to decode images we will never store.
       lastClipboardContent = text || ''
-      if (!text) {
-        const pausedImage = clipboard.readImage()
-        if (!pausedImage.isEmpty()) lastImageBitmapKey = getImageBitmapKey(pausedImage)
-      }
+      if (!text) lastRawImageSignature = readRawImageSignature()
       return
     }
 
@@ -1043,9 +1178,12 @@ function pollClipboard() {
       }
 
       lastClipboardContent = text
-      lastImageBitmapKey = '' // Clear image when text is copied
+      lastImageBitmapKey = ''
+      // Rich copies (Numbers, Keynote, Office…) put a rendered image next to the
+      // text. Record it as seen so one copy yields one item, not text + image.
+      lastRawImageSignature = readRawImageSignature()
       const type = detectContentType(text)
-      const sourceApp = getFrontmostApp()
+      const source = getFrontmostApplicationIdentity()
 
       const MAX_SEARCH_TEXT = 5000
       const searchText = text.length > MAX_SEARCH_TEXT
@@ -1059,7 +1197,7 @@ function pollClipboard() {
         metadata: {
           url: type === 'link' ? text : undefined,
           colorHex: type === 'color' ? text : undefined,
-          sourceApp: sourceApp || undefined,
+          ...sourceMetadata(source),
           favicon: type === 'link' && settings.loadFavicons ? getFaviconUrl(text) : undefined
         },
         createdAt: Date.now(),
@@ -1076,7 +1214,13 @@ function pollClipboard() {
     }
 
     // --- Image check (only if text didn't change) ---
-    // clipboard.readImage() is expensive; we skip it when text already changed.
+    // Cheap raw-bytes signature first; decode only when it actually changed.
+    const rawSignature = readRawImageSignature()
+    if (rawSignature && rawSignature === lastRawImageSignature) return
+    lastRawImageSignature = rawSignature
+    // Plain-text pasteboards (the common idle state) never need an image decode.
+    if (!rawSignature && !clipboard.availableFormats().some(format => format.startsWith('image/'))) return
+
     const image = clipboard.readImage()
 
     if (!image.isEmpty()) {
@@ -1102,12 +1246,10 @@ function pollClipboard() {
           return
         }
 
-        const sourceApp = getFrontmostApp()
+        const source = getFrontmostApplicationIdentity()
         const id = uuidv4()
-
-        const thumbImg = image.resize({ width: 120, height: 120 })
-        const thumbnail = thumbImg.toJPEG(70).toString('base64')
-        const thumbnailDataUrl = `data:image/jpeg;base64,${thumbnail}`
+        const size = image.getSize()
+        const thumbnailDataUrl = makeThumbnail(image)
 
         let persisted: ReturnType<typeof persistImageToDisk>
         try {
@@ -1123,10 +1265,13 @@ function pollClipboard() {
           content: persisted.fileUrl,
           thumbnail: thumbnailDataUrl,
           metadata: {
-            sourceApp: sourceApp || undefined,
+            ...sourceMetadata(source),
             imagePath: persisted.imagePath,
             imageMime: persisted.mime,
-            imageKey: bitmapKey
+            imageKey: bitmapKey,
+            imageWidth: size.width,
+            imageHeight: size.height,
+            thumbnailVersion: THUMBNAIL_VERSION
           },
           createdAt: Date.now(),
           searchText: 'image screenshot',
@@ -1280,6 +1425,7 @@ app.whenReady().then(() => {
   // Migration: older versions stored full image data URLs in electron-store.
   // Convert them to on-disk files to reduce storage and memory usage.
   migrateHistoryImagesToDisk()
+  upgradeLegacyThumbnails()
 
   // Apply initial dock visibility. The app is an LSUIElement (menu-bar agent) so
   // it starts WITHOUT a Dock icon by default; explicitly show it when the user
@@ -1335,6 +1481,8 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('get-app-icon', (_evt, appPath: unknown) => getAppIconDataUrl(appPath))
+
   ipcMain.handle('get-image-drag-path', async (_evt, itemId: unknown) => {
     try {
       const item = getItemById(itemId)
@@ -1384,8 +1532,7 @@ app.whenReady().then(() => {
     } else {
       clipboard.writeText(item.content)
     }
-    lastClipboardContent = item.content
-    lastImageBitmapKey = ''
+    markClipboardWrittenByApp(item.content)
 
     // Move item to top of history (update timestamp)
     moveItemToTop(item.id)
@@ -1403,8 +1550,7 @@ app.whenReady().then(() => {
     // but we keep this handler for explicit "paste without formatting" requests.
     const plainText = item.type === 'image' ? '[Image]' : item.content
     clipboard.writeText(plainText)
-    lastClipboardContent = plainText
-    lastImageBitmapKey = '' // writeText cleared any image on the pasteboard
+    markClipboardWrittenByApp(plainText)
 
     // Move item to top of history (update timestamp)
     moveItemToTop(item.id)
@@ -1427,8 +1573,7 @@ app.whenReady().then(() => {
     } else {
       clipboard.writeText(item.content)
     }
-    lastClipboardContent = item.content
-    lastImageBitmapKey = ''
+    markClipboardWrittenByApp(item.content)
 
     // Move item to top of history (update timestamp)
     moveItemToTop(item.id)
@@ -1441,8 +1586,7 @@ app.whenReady().then(() => {
   // lastClipboardContent so the poller doesn't re-capture it as a new item.
   ipcMain.handle('copy-text', (_, text: string) => {
     clipboard.writeText(text)
-    lastClipboardContent = text
-    lastImageBitmapKey = '' // writeText cleared any image on the pasteboard
+    markClipboardWrittenByApp(text)
   })
 
   ipcMain.handle('delete-item', (_, id: string) => {
@@ -1486,6 +1630,8 @@ app.whenReady().then(() => {
     repository.saveSettings(clean)
     invalidateSettingsCache()
     applySettings(clean)
+    if (mainWindow?.isVisible()) mainWindow.webContents.send('settings-updated', getSettings())
+    else rendererStale.settings = true
   })
 
   ipcMain.handle('open-settings', (_, route: unknown) => openSettings(route === 'onboarding' ? 'onboarding' : 'settings'))

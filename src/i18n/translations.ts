@@ -166,6 +166,41 @@ export interface Translations {
   // Error boundary
   somethingWrong: string
   errorHint: string
+
+  // Shelf, smart content and preview extras
+  newCollection: string
+  collectionNamePlaceholder: string
+  create: string
+  cancel: string
+  deleteCollectionConfirm: string
+  removeFromCollection: string
+  noCollections: string
+  collection: string
+  pause: string
+  pausedUntil: string
+  switchView: string
+  save: string
+  unsave: string
+  kindCode: string
+  kindJson: string
+  kindEmail: string
+  kindPhone: string
+  writeEmail: string
+  copyDigits: string
+  copyFormatted: string
+  copyMinified: string
+  statsChars: string
+  statsWords: string
+  statsLines: string
+  moreActions: string
+  itemSingular: string
+  emptySaved: string
+  emptySavedHint: string
+  emptyCollection: string
+  emptyCollectionHint: string
+  statsChar: string
+  statsWord: string
+  statsLine: string
 }
 
 const en: Translations = {
@@ -317,7 +352,41 @@ const en: Translations = {
   onboardingFinish: 'Finish setup',
 
   somethingWrong: 'Something went wrong',
-  errorHint: 'Press Esc to close and try again'
+  errorHint: 'Press Esc to close and try again',
+
+  newCollection: "New collection…",
+  collectionNamePlaceholder: "Collection name",
+  create: "Create",
+  cancel: "Cancel",
+  deleteCollectionConfirm: "Delete “{name}”? Items stay in your history.",
+  removeFromCollection: "Remove from collection",
+  noCollections: "No collections yet",
+  collection: "Collection",
+  pause: "Pause",
+  pausedUntil: "Paused until {time}",
+  switchView: "Switch view",
+  save: "Save",
+  unsave: "Unsave",
+  kindCode: "Code",
+  kindJson: "JSON",
+  kindEmail: "Email",
+  kindPhone: "Phone",
+  writeEmail: "Write email",
+  copyDigits: "Copy digits only",
+  copyFormatted: "Copy formatted",
+  copyMinified: "Copy minified",
+  statsChars: "characters",
+  statsWords: "words",
+  statsLines: "lines",
+  moreActions: "More",
+  itemSingular: "item",
+  emptySaved: "Nothing saved yet",
+  emptySavedHint: "Press ⌘S on any clip to keep it here for good",
+  emptyCollection: "This collection is empty",
+  emptyCollectionHint: "Select clips and press ⌘⇧S to add them",
+  statsChar: "character",
+  statsWord: "word",
+  statsLine: "line"
 }
 
 const es: Translations = {
@@ -469,7 +538,41 @@ const es: Translations = {
   onboardingFinish: 'Finalizar configuración',
 
   somethingWrong: 'Algo salió mal',
-  errorHint: 'Pulsa Esc para cerrar e inténtalo de nuevo'
+  errorHint: 'Pulsa Esc para cerrar e inténtalo de nuevo',
+
+  newCollection: "Nueva colección…",
+  collectionNamePlaceholder: "Nombre de la colección",
+  create: "Crear",
+  cancel: "Cancelar",
+  deleteCollectionConfirm: "¿Eliminar «{name}»? Los elementos se quedan en el historial.",
+  removeFromCollection: "Quitar de la colección",
+  noCollections: "Aún no hay colecciones",
+  collection: "Colección",
+  pause: "Pausa",
+  pausedUntil: "En pausa hasta las {time}",
+  switchView: "Cambiar vista",
+  save: "Guardar",
+  unsave: "Quitar de guardados",
+  kindCode: "Código",
+  kindJson: "JSON",
+  kindEmail: "Correo",
+  kindPhone: "Teléfono",
+  writeEmail: "Escribir correo",
+  copyDigits: "Copiar solo dígitos",
+  copyFormatted: "Copiar formateado",
+  copyMinified: "Copiar compacto",
+  statsChars: "caracteres",
+  statsWords: "palabras",
+  statsLines: "líneas",
+  moreActions: "Más",
+  itemSingular: "elemento",
+  emptySaved: "Aún no hay nada guardado",
+  emptySavedHint: "Pulsa ⌘S en un elemento para conservarlo aquí",
+  emptyCollection: "Esta colección está vacía",
+  emptyCollectionHint: "Selecciona elementos y pulsa ⌘⇧S para añadirlos",
+  statsChar: "carácter",
+  statsWord: "palabra",
+  statsLine: "línea"
 }
 
 const fr: Translations = {
@@ -512,9 +615,9 @@ const fr: Translations = {
   copied: 'Copié',
 
   justNow: "À l'instant",
-  minutesAgo: 'min',
-  hoursAgo: 'h',
-  daysAgo: 'j',
+  minutesAgo: ' min',
+  hoursAgo: ' h',
+  daysAgo: ' j',
 
   from: 'de',
   colorValue: 'Valeur de couleur',
@@ -621,7 +724,41 @@ const fr: Translations = {
   onboardingFinish: 'Terminer la configuration',
 
   somethingWrong: "Une erreur s'est produite",
-  errorHint: 'Appuyez sur Échap pour fermer et réessayer'
+  errorHint: 'Appuyez sur Échap pour fermer et réessayer',
+
+  newCollection: "Nouvelle collection…",
+  collectionNamePlaceholder: "Nom de la collection",
+  create: "Créer",
+  cancel: "Annuler",
+  deleteCollectionConfirm: "Supprimer « {name} » ? Les éléments restent dans l’historique.",
+  removeFromCollection: "Retirer de la collection",
+  noCollections: "Aucune collection",
+  collection: "Collection",
+  pause: "Pause",
+  pausedUntil: "En pause jusqu’à {time}",
+  switchView: "Changer de vue",
+  save: "Enregistrer",
+  unsave: "Retirer des enregistrés",
+  kindCode: "Code",
+  kindJson: "JSON",
+  kindEmail: "E-mail",
+  kindPhone: "Téléphone",
+  writeEmail: "Écrire un e-mail",
+  copyDigits: "Copier les chiffres",
+  copyFormatted: "Copier formaté",
+  copyMinified: "Copier compact",
+  statsChars: "caractères",
+  statsWords: "mots",
+  statsLines: "lignes",
+  moreActions: "Plus",
+  itemSingular: "élément",
+  emptySaved: "Rien d’enregistré pour l’instant",
+  emptySavedHint: "Appuyez sur ⌘S sur un élément pour le conserver ici",
+  emptyCollection: "Cette collection est vide",
+  emptyCollectionHint: "Sélectionnez des éléments et appuyez sur ⌘⇧S pour les ajouter",
+  statsChar: "caractère",
+  statsWord: "mot",
+  statsLine: "ligne"
 }
 
 const de: Translations = {
@@ -664,9 +801,9 @@ const de: Translations = {
   copied: 'Kopiert',
 
   justNow: 'Gerade eben',
-  minutesAgo: 'Min',
-  hoursAgo: 'Std',
-  daysAgo: 'T',
+  minutesAgo: ' Min.',
+  hoursAgo: ' Std.',
+  daysAgo: ' Tg.',
 
   from: 'von',
   colorValue: 'Farbwert',
@@ -773,7 +910,41 @@ const de: Translations = {
   onboardingFinish: 'Setup abschließen',
 
   somethingWrong: 'Etwas ist schiefgelaufen',
-  errorHint: 'Esc drücken zum Schließen und erneut versuchen'
+  errorHint: 'Esc drücken zum Schließen und erneut versuchen',
+
+  newCollection: "Neue Sammlung…",
+  collectionNamePlaceholder: "Name der Sammlung",
+  create: "Erstellen",
+  cancel: "Abbrechen",
+  deleteCollectionConfirm: "„{name}“ löschen? Die Einträge bleiben im Verlauf.",
+  removeFromCollection: "Aus Sammlung entfernen",
+  noCollections: "Noch keine Sammlungen",
+  collection: "Sammlung",
+  pause: "Pause",
+  pausedUntil: "Pausiert bis {time}",
+  switchView: "Ansicht wechseln",
+  save: "Merken",
+  unsave: "Nicht mehr merken",
+  kindCode: "Code",
+  kindJson: "JSON",
+  kindEmail: "E-Mail",
+  kindPhone: "Telefon",
+  writeEmail: "E-Mail schreiben",
+  copyDigits: "Nur Ziffern kopieren",
+  copyFormatted: "Formatiert kopieren",
+  copyMinified: "Kompakt kopieren",
+  statsChars: "Zeichen",
+  statsWords: "Wörter",
+  statsLines: "Zeilen",
+  moreActions: "Mehr",
+  itemSingular: "Element",
+  emptySaved: "Noch nichts gemerkt",
+  emptySavedHint: "Drücke ⌘S auf einem Eintrag, um ihn dauerhaft zu behalten",
+  emptyCollection: "Diese Sammlung ist leer",
+  emptyCollectionHint: "Einträge auswählen und mit ⌘⇧S hinzufügen",
+  statsChar: "Zeichen",
+  statsWord: "Wort",
+  statsLine: "Zeile"
 }
 
 const zh: Translations = {
@@ -925,7 +1096,41 @@ const zh: Translations = {
   onboardingFinish: '完成设置',
 
   somethingWrong: '出现错误',
-  errorHint: '按 Esc 关闭并重试'
+  errorHint: '按 Esc 关闭并重试',
+
+  newCollection: "新建收藏集…",
+  collectionNamePlaceholder: "收藏集名称",
+  create: "创建",
+  cancel: "取消",
+  deleteCollectionConfirm: "删除“{name}”？条目仍保留在历史记录中。",
+  removeFromCollection: "从收藏集中移除",
+  noCollections: "还没有收藏集",
+  collection: "收藏集",
+  pause: "暂停",
+  pausedUntil: "已暂停至 {time}",
+  switchView: "切换视图",
+  save: "收藏",
+  unsave: "取消收藏",
+  kindCode: "代码",
+  kindJson: "JSON",
+  kindEmail: "邮箱",
+  kindPhone: "电话",
+  writeEmail: "写邮件",
+  copyDigits: "仅复制数字",
+  copyFormatted: "复制格式化内容",
+  copyMinified: "复制压缩内容",
+  statsChars: "字符",
+  statsWords: "词",
+  statsLines: "行",
+  moreActions: "更多",
+  itemSingular: "项",
+  emptySaved: "还没有收藏",
+  emptySavedHint: "在任意条目上按 ⌘S 即可永久保留",
+  emptyCollection: "此收藏集为空",
+  emptyCollectionHint: "选择条目后按 ⌘⇧S 添加",
+  statsChar: "字符",
+  statsWord: "词",
+  statsLine: "行"
 }
 
 export const translations: Record<Language, Translations> = {

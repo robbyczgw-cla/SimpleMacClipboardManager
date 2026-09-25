@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   copyText: (text: string): Promise<void> => ipcRenderer.invoke('copy-text', text),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   getImageDragPath: (itemId: string) => ipcRenderer.invoke('get-image-drag-path', itemId),
+  getAppIcon: (appPath: string): Promise<string | null> => ipcRenderer.invoke('get-app-icon', appPath),
 
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => {
     const handler = (_: any, history: ClipboardItem[]) => callback(history)
@@ -49,6 +50,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_: any, collections: Collection[]) => callback(collections)
     ipcRenderer.on('collections-updated', handler)
     return () => ipcRenderer.removeListener('collections-updated', handler)
+  },
+
+  onSettingsUpdated: (callback: (settings: Settings) => void) => {
+    const handler = (_: any, settings: Settings) => callback(settings)
+    ipcRenderer.on('settings-updated', handler)
+    return () => ipcRenderer.removeListener('settings-updated', handler)
   },
 
   onPanelShown: (callback: () => void) => {
