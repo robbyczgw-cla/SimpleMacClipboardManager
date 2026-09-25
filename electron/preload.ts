@@ -51,6 +51,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('collections-updated', handler)
   },
 
+  onSettingsUpdated: (callback: (settings: Settings) => void) => {
+    const handler = (_: any, settings: Settings) => callback(settings)
+    ipcRenderer.on('settings-updated', handler)
+    return () => ipcRenderer.removeListener('settings-updated', handler)
+  },
+
   onPanelShown: (callback: () => void) => {
     ipcRenderer.on('panel-shown', callback)
     return () => ipcRenderer.removeListener('panel-shown', callback)

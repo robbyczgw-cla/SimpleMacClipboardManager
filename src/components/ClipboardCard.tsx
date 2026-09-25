@@ -16,6 +16,7 @@ interface ClipboardCardProps {
   onPreview?: () => void
   isVertical?: boolean
   cardSize?: CardSize
+  now: number
   t: Translations
 }
 
@@ -30,8 +31,8 @@ const TYPE_COLOR: Record<ClipboardItem['type'], string> = {
   color: '#30D158'
 }
 
-function formatTimeAgo(timestamp: number, t: Translations): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000)
+function formatTimeAgo(timestamp: number, now: number, t: Translations): string {
+  const seconds = Math.max(0, Math.floor((now - timestamp) / 1000))
   if (seconds < 60) return t.justNow
   if (seconds < 3600) return `${Math.floor(seconds / 60)}${t.minutesAgo}`
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}${t.hoursAgo}`
@@ -60,6 +61,7 @@ function ClipboardCard({
   onPreview,
   isVertical = false,
   cardSize = 'medium',
+  now,
   t
 }: ClipboardCardProps) {
   const dimensions = CARD_DIMENSIONS[cardSize]
@@ -272,7 +274,7 @@ function ClipboardCard({
           )}
         </div>
         <span className="text-[10px] text-[var(--text-tertiary)] flex-shrink-0">
-          {formatTimeAgo(item.createdAt, t)}
+          {formatTimeAgo(item.createdAt, now, t)}
         </span>
       </div>
     </div>

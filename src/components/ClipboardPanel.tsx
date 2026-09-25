@@ -38,6 +38,7 @@ interface ClipboardPanelProps {
   onFilterChange: (type: FilterType) => void
   panelPosition: PanelPosition
   cardSize: CardSize
+  now: number
   t: Translations
 }
 
@@ -47,6 +48,7 @@ interface RowData {
   selectedIds: Set<string>
   cardSize: CardSize
   isVertical: boolean
+  now: number
   t: Translations
   onSelect: (index: number) => void
   onToggleSelect: (id: string, shiftKey: boolean) => void
@@ -85,6 +87,7 @@ const Row = memo(function Row({ index, style, data }: ListChildComponentProps<Ro
         onPreview={() => data.onPreview(item)}
         isVertical={data.isVertical}
         cardSize={data.cardSize}
+        now={data.now}
         t={data.t}
       />
     </div>
@@ -123,6 +126,7 @@ export default function ClipboardPanel({
   onFilterChange,
   panelPosition,
   cardSize,
+  now,
   t
 }: ClipboardPanelProps) {
   const listRef = useRef<List>(null)
@@ -173,6 +177,7 @@ export default function ClipboardPanel({
     selectedIds,
     cardSize,
     isVertical,
+    now,
     t,
     onSelect,
     onToggleSelect,
@@ -180,7 +185,7 @@ export default function ClipboardPanel({
     onDelete,
     onToggleSaved,
     onPreview
-  }), [items, selectedIndex, selectedIds, cardSize, isVertical, t, onSelect, onToggleSelect, onPaste, onDelete, onToggleSaved, onPreview])
+  }), [items, selectedIndex, selectedIds, cardSize, isVertical, now, t, onSelect, onToggleSelect, onPaste, onDelete, onToggleSaved, onPreview])
 
   const selectedItem = items[selectedIndex]
 

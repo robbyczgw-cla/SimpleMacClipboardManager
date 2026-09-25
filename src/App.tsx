@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useDeferredValue } from 'react'
 import { CaptureStatus, ClipboardItem, Collection, PanelPosition, CardSize, PauseCaptureDuration } from './types'
 import { isItemSaved } from '../common/history'
 import { getTranslations, Language } from './i18n/translations'
@@ -31,6 +31,9 @@ function App() {
   const [shelfView, setShelfView] = useState<ShelfView>('recent')
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null)
   const [captureStatus, setCaptureStatus] = useState<CaptureStatus>({ paused: false, pausedUntil: null })
+  // Clock for relative timestamps ("3m"). Refreshed on open and every 30 s while
+  // visible, so memoized cards don't show stale ages.
+  const [now, setNow] = useState(() => Date.now())
 
   const t = useMemo(() => getTranslations(language), [language])
 
@@ -54,24 +57,25 @@ function App() {
     window.electronAPI.getCaptureStatus().then(setCaptureStatus)
     window.electronAPI.getSettings().then(applySettings)
 
-    // Listen for updates
+    // Listen for updates. The main process pushes whatever changed while the
+    // panel was hidden right BEFORE 'panel-shown', so opening needs no getters.
     const unsubHistory = window.electronAPI.onHistoryUpdated(setHistory)
     const unsubShown = window.electronAPI.onPanelShown(() => {
       setIsVisible(true)
-      setSelectedIndex(0)
-      setSearchQuery('')
-      setSelectedIds(new Set()) // Clear multi-select
-      // The main process only pushes history while visible, so re-sync on open.
-      window.electronAPI.getHistory().then(setHistory)
-      window.electronAPI.getCollections().then(setCollections)
-      window.electronAPI.getCaptureStatus().then(setCaptureStatus)
-      window.electronAPI.getSettings().then(applySettings)
+      setNow(Date.now())
     })
+    // Reset transient UI state on HIDE rather than on show, so the next open
+    // paints an already-clean panel instead of flashing the previous query.
     const unsubHidden = window.electronAPI.onPanelHidden(() => {
       setIsVisible(false)
+      setSelectedIndex(0)
+      setSearchQuery('')
+      setSelectedIds(prev => (prev.size === 0 ? prev : new Set()))
+      setPreviewItem(null)
     })
     const unsubCollections = window.electronAPI.onCollectionsUpdated(setCollections)
     const unsubCaptureStatus = window.electronAPI.onCaptureStatusUpdated(setCaptureStatus)
+    const unsubSettings = window.electronAPI.onSettingsUpdated(applySettings)
 
     return () => {
       unsubHistory()
@@ -79,6 +83,7 @@ function App() {
       unsubHidden()
       unsubCollections()
       unsubCaptureStatus()
+      unsubSettings()
     }
   }, [isSettingsPage, isOnboardingPage])
 
@@ -86,8 +91,11 @@ function App() {
   // it) is only recomputed when its inputs change — not on every render/keystroke.
   // When a query is present, results are ranked by fuzzy relevance; the sort is
   // stable, so equal scores keep their recency order.
+  // Typing stays responsive on large histories: the input updates immediately,
+  // the ranking catches up in a lower-priority render.
+  const deferredQuery = useDeferredValue(searchQuery)
   const filteredHistory = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
+    const q = deferredQuery.trim().toLowerCase()
     const shelfItems = shelfView === 'saved'
       ? history.filter(isItemSaved)
       : shelfView === 'collection' && selectedCollectionId
@@ -105,7 +113,7 @@ function App() {
     }
     scored.sort((a, b) => b.score - a.score)
     return scored.map(s => s.item)
-  }, [history, filterType, searchQuery, shelfView, selectedCollectionId, collections])
+  }, [history, filterType, deferredQuery, shelfView, selectedCollectionId, collections])
 
   // Brief flash before the window hides to confirm the action
   const flashCopied = useCallback((id: string) => {
@@ -346,6 +354,12 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown, isSettingsPage, isOnboardingPage])
 
+  useEffect(() => {
+    if (!isVisible) return
+    const timer = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(timer)
+  }, [isVisible])
+
   // Reset selection when the result set changes shape.
   useEffect(() => {
     setSelectedIndex(0)
@@ -405,6 +419,7 @@ function App() {
         onFilterChange={setFilterType}
         panelPosition={panelPosition}
         cardSize={cardSize}
+        now={now}
         t={t}
       />
       {copiedId && (

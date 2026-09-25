@@ -2,6 +2,7 @@ import { app, BrowserWindow, globalShortcut, ipcMain, clipboard, nativeImage, sc
 import { join, dirname } from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { exec, execFile } from 'child_process'
+import { createHash } from 'crypto'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import type { ApplicationIdentity } from '../common/privacy'
@@ -27,11 +28,16 @@ let historyCache: ClipboardItem[] = repository.history
 let pendingHistorySave: ReturnType<typeof setTimeout> | null = null
 let lastSoundTime = 0
 
+// PERFORMANCE: resolved once — applyHistoryUpdate() checks every image item
+// against this directory, so an existsSync per call added up to 2×N syscalls.
+let _imagesDir: string | null = null
 function getImagesDir(): string {
+  if (_imagesDir && existsSync(_imagesDir)) return _imagesDir
   const dir = join(app.getPath('userData'), 'images')
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true })
   }
+  _imagesDir = dir
   return dir
 }
 
@@ -52,14 +58,15 @@ function deleteImageFileForItem(item: ClipboardItem) {
 
 function applyHistoryUpdate(next: ClipboardItem[]) {
   // Cleanup removed image files (best-effort)
+  const imagesDir = getImagesDir()
   const previousPaths = new Set(
     historyCache
-      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, getImagesDir()))
+      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, imagesDir))
       .map(i => i.metadata.imagePath as string)
   )
   const nextPaths = new Set(
     next
-      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, getImagesDir()))
+      .filter(i => i.type === 'image' && i.metadata.imagePath && isPathWithinDirectory(i.metadata.imagePath, imagesDir))
       .map(i => i.metadata.imagePath as string)
   )
   for (const p of previousPaths) {
@@ -88,10 +95,12 @@ function applyHistoryUpdate(next: ClipboardItem[]) {
   historyCache = next
 
   // PERFORMANCE: the renderer only needs updates while the panel is visible.
-  // When hidden it re-fetches via get-history on panel-shown, so skip the
-  // (potentially large, thumbnail-laden) structured-clone on every poll capture.
+  // When hidden we just mark it stale and push once right before the next show,
+  // so a burst of background captures costs one structured-clone, not N.
   if (mainWindow?.isVisible()) {
     mainWindow.webContents.send('history-updated', historyCache)
+  } else {
+    rendererStale.history = true
   }
 
   // PERFORMANCE: debounce disk writes to reduce electron-store churn.
@@ -169,6 +178,8 @@ let previousApp = '' // Store the app that was active before opening clipboard p
 let capturePaused = false
 let capturePausedUntil: number | null = null
 let capturePauseTimer: ReturnType<typeof setTimeout> | null = null
+// What changed while the panel was hidden; flushed in syncRendererBeforeShow().
+const rendererStale = { history: false, collections: false, settings: false }
 
 function getCaptureStatus(): CaptureStatus {
   if (capturePaused && capturePausedUntil !== null && capturePausedUntil <= Date.now()) {
@@ -188,6 +199,19 @@ function isCapturePaused(): boolean {
 
 function notifyCaptureStatusUpdated() {
   if (mainWindow?.isVisible()) mainWindow.webContents.send('capture-status-updated', getCaptureStatus())
+}
+
+// Push only what changed while hidden, BEFORE 'panel-shown', so the renderer
+// already holds fresh state when the window paints — no getter round-trips (and
+// no multi-MB history clone) on the hot open path when nothing changed.
+function syncRendererBeforeShow() {
+  if (!mainWindow) return
+  const wc = mainWindow.webContents
+  if (rendererStale.history) wc.send('history-updated', historyCache)
+  if (rendererStale.collections) wc.send('collections-updated', repository.collections)
+  if (rendererStale.settings) wc.send('settings-updated', getSettings())
+  wc.send('capture-status-updated', getCaptureStatus())
+  rendererStale.history = rendererStale.collections = rendererStale.settings = false
 }
 
 function resumeCapture() {
@@ -462,6 +486,7 @@ function toggleWindow() {
     // Show the panel IMMEDIATELY — never block the hottest path on osascript.
     const bounds = getWindowBounds()
     mainWindow.setBounds(bounds)
+    syncRendererBeforeShow()
     mainWindow.show()
     mainWindow.focus()
     mainWindow.webContents.send('panel-shown')
@@ -612,6 +637,8 @@ function toggleSavedItem(rawId: unknown) {
 function notifyCollectionsUpdated() {
   if (mainWindow?.isVisible()) {
     mainWindow.webContents.send('collections-updated', repository.collections)
+  } else {
+    rendererStale.collections = true
   }
 }
 
@@ -991,6 +1018,7 @@ function startClipboardPolling() {
   // Safely read initial clipboard content
   try {
     lastClipboardContent = clipboard.readText() || ''
+    lastRawImageSignature = readRawImageSignature()
   } catch (e) {
     console.error('Failed to read initial clipboard:', e)
     lastClipboardContent = ''
@@ -1006,6 +1034,34 @@ function startClipboardPolling() {
 // is only width * height * channels, so different same-size screenshots collided.
 let lastImageBitmapKey = ''
 
+// PERFORMANCE: Electron exposes no NSPasteboard changeCount, and decoding the
+// pasteboard image + hashing its bitmap costs ~50 ms. Doing that every poll while
+// an image merely sits on the clipboard burned ~10% of a core. Instead we hash
+// the still-encoded pasteboard bytes (sub-millisecond) and only decode when that
+// raw signature changes. Exotic flavours fall back to the decode path.
+const RAW_IMAGE_FLAVORS = ['public.png', 'public.tiff', 'public.jpeg', 'com.compuserve.gif', 'public.heic']
+let lastRawImageSignature = ''
+
+function readRawImageSignature(): string {
+  for (const flavor of RAW_IMAGE_FLAVORS) {
+    try {
+      const raw = clipboard.readBuffer(flavor)
+      if (raw.length > 0) return `${flavor}:${raw.length}:${createHash('sha1').update(raw).digest('hex')}`
+    } catch {
+      // flavour unsupported on this pasteboard — try the next one
+    }
+  }
+  return ''
+}
+
+// Called after we write to the clipboard ourselves, so the poller treats our own
+// write as already seen instead of decoding and re-capturing it.
+function markClipboardWrittenByApp(text: string) {
+  lastClipboardContent = text
+  lastImageBitmapKey = ''
+  lastRawImageSignature = readRawImageSignature()
+}
+
 function getImageBitmapKey(image: Electron.NativeImage): string {
   const size = image.getSize()
   return getBitmapFingerprint(size.width, size.height, image.toBitmap())
@@ -1020,12 +1076,10 @@ function pollClipboard() {
 
     if (isCapturePaused()) {
       // Advance the fingerprints while paused so resuming does not silently
-      // capture content that was copied during the pause window.
+      // capture content that was copied during the pause window. The raw
+      // signature is enough — no need to decode images we will never store.
       lastClipboardContent = text || ''
-      if (!text) {
-        const pausedImage = clipboard.readImage()
-        if (!pausedImage.isEmpty()) lastImageBitmapKey = getImageBitmapKey(pausedImage)
-      }
+      if (!text) lastRawImageSignature = readRawImageSignature()
       return
     }
 
@@ -1043,7 +1097,10 @@ function pollClipboard() {
       }
 
       lastClipboardContent = text
-      lastImageBitmapKey = '' // Clear image when text is copied
+      lastImageBitmapKey = ''
+      // Rich copies (Numbers, Keynote, Office…) put a rendered image next to the
+      // text. Record it as seen so one copy yields one item, not text + image.
+      lastRawImageSignature = readRawImageSignature()
       const type = detectContentType(text)
       const sourceApp = getFrontmostApp()
 
@@ -1076,7 +1133,13 @@ function pollClipboard() {
     }
 
     // --- Image check (only if text didn't change) ---
-    // clipboard.readImage() is expensive; we skip it when text already changed.
+    // Cheap raw-bytes signature first; decode only when it actually changed.
+    const rawSignature = readRawImageSignature()
+    if (rawSignature && rawSignature === lastRawImageSignature) return
+    lastRawImageSignature = rawSignature
+    // Plain-text pasteboards (the common idle state) never need an image decode.
+    if (!rawSignature && !clipboard.availableFormats().some(format => format.startsWith('image/'))) return
+
     const image = clipboard.readImage()
 
     if (!image.isEmpty()) {
@@ -1384,8 +1447,7 @@ app.whenReady().then(() => {
     } else {
       clipboard.writeText(item.content)
     }
-    lastClipboardContent = item.content
-    lastImageBitmapKey = ''
+    markClipboardWrittenByApp(item.content)
 
     // Move item to top of history (update timestamp)
     moveItemToTop(item.id)
@@ -1403,8 +1465,7 @@ app.whenReady().then(() => {
     // but we keep this handler for explicit "paste without formatting" requests.
     const plainText = item.type === 'image' ? '[Image]' : item.content
     clipboard.writeText(plainText)
-    lastClipboardContent = plainText
-    lastImageBitmapKey = '' // writeText cleared any image on the pasteboard
+    markClipboardWrittenByApp(plainText)
 
     // Move item to top of history (update timestamp)
     moveItemToTop(item.id)
@@ -1427,8 +1488,7 @@ app.whenReady().then(() => {
     } else {
       clipboard.writeText(item.content)
     }
-    lastClipboardContent = item.content
-    lastImageBitmapKey = ''
+    markClipboardWrittenByApp(item.content)
 
     // Move item to top of history (update timestamp)
     moveItemToTop(item.id)
@@ -1441,8 +1501,7 @@ app.whenReady().then(() => {
   // lastClipboardContent so the poller doesn't re-capture it as a new item.
   ipcMain.handle('copy-text', (_, text: string) => {
     clipboard.writeText(text)
-    lastClipboardContent = text
-    lastImageBitmapKey = '' // writeText cleared any image on the pasteboard
+    markClipboardWrittenByApp(text)
   })
 
   ipcMain.handle('delete-item', (_, id: string) => {
@@ -1486,6 +1545,8 @@ app.whenReady().then(() => {
     repository.saveSettings(clean)
     invalidateSettingsCache()
     applySettings(clean)
+    if (mainWindow?.isVisible()) mainWindow.webContents.send('settings-updated', getSettings())
+    else rendererStale.settings = true
   })
 
   ipcMain.handle('open-settings', (_, route: unknown) => openSettings(route === 'onboarding' ? 'onboarding' : 'settings'))

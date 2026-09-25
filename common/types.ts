@@ -121,6 +121,7 @@ export interface ElectronAPI {
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => () => void
   onCaptureStatusUpdated: (callback: (status: CaptureStatus) => void) => () => void
   onCollectionsUpdated: (callback: (collections: Collection[]) => void) => () => void
+  onSettingsUpdated: (callback: (settings: Settings) => void) => () => void
   onPanelShown: (callback: () => void) => () => void
   onPanelHidden: (callback: () => void) => () => void
   onOpenSettings: (callback: () => void) => () => void
