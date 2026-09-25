@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   copyText: (text: string): Promise<void> => ipcRenderer.invoke('copy-text', text),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   getImageDragPath: (itemId: string) => ipcRenderer.invoke('get-image-drag-path', itemId),
+  getAppIcon: (appPath: string): Promise<string | null> => ipcRenderer.invoke('get-app-icon', appPath),
 
   onHistoryUpdated: (callback: (history: ClipboardItem[]) => void) => {
     const handler = (_: any, history: ClipboardItem[]) => callback(history)

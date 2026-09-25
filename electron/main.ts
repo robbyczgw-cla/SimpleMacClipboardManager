@@ -17,6 +17,7 @@ import { isSafeId } from '../common/ids'
 import { matchesIgnoredApplication, pruneHistory } from '../common/privacy'
 import { StoreRepository } from './repositories/store-repository'
 import { productMetadata } from '../common/product'
+import { panelThickness } from '../common/card-sizes'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -263,7 +264,7 @@ function getWindowBounds() {
   const { x: displayX, y: displayY, width, height } = display.bounds
 
   const settings = getSettings()
-  const panelSize = 320
+  const panelSize = panelThickness(settings.panelPosition, settings.cardSize)
 
   switch (settings.panelPosition) {
     case 'top':
@@ -762,6 +763,9 @@ function validateImportedItem(raw: any, settings: Settings): ClipboardItem | nul
     fileName: typeof md.fileName === 'string' ? md.fileName : undefined,
     colorHex: typeof md.colorHex === 'string' ? md.colorHex : undefined,
     sourceApp: typeof md.sourceApp === 'string' ? md.sourceApp : undefined,
+    sourceAppBundleId: typeof md.sourceAppBundleId === 'string' ? md.sourceAppBundleId.slice(0, 200) : undefined,
+    // Only a plausible local .app path; get-app-icon validates it again.
+    sourceAppPath: typeof md.sourceAppPath === 'string' && /^\/.{1,1000}\.app$/i.test(md.sourceAppPath) ? md.sourceAppPath : undefined,
     imageMime: typeof md.imageMime === 'string' ? md.imageMime : undefined
     // NOTE: favicon and title intentionally dropped on import (arbitrary URLs).
   }
@@ -914,7 +918,7 @@ const PASSWORD_MANAGER_APPS = [
 // value synchronously and kicks a non-blocking background refresh when stale, so
 // the poll loop and panel-open path are never stalled waiting on System Events.
 const FRONTMOST_APP_SCRIPT =
-  'tell application "System Events" to tell first application process whose frontmost is true to return name & "||" & bundle identifier'
+  'tell application "System Events" to tell first application process whose frontmost is true to return name & "||" & bundle identifier & "||" & POSIX path of application file'
 let _frontmostAppCache: ApplicationIdentity = { name: '' }
 let _frontmostAppCacheTime = 0
 let _frontmostRefreshing = false
@@ -923,14 +927,16 @@ const FRONTMOST_APP_CACHE_TTL = 2000
 function refreshFrontmostApp() {
   if (_frontmostRefreshing) return
   _frontmostRefreshing = true
-  execFile('osascript', ['-e', FRONTMOST_APP_SCRIPT], { timeout: 500 }, (err, stdout) => {
+  execFile('osascript', ['-e', FRONTMOST_APP_SCRIPT], { timeout: 1000 }, (err, stdout) => {
     _frontmostRefreshing = false
     _frontmostAppCacheTime = Date.now()
     if (!err && stdout) {
-      const [name, bundleId] = stdout.trim().split('||')
+      const [name, bundleId, appPath] = stdout.trim().split('||').map(part => (part || '').trim())
       _frontmostAppCache = {
-        name: (name || '').trim().toLowerCase(),
-        bundleId: (bundleId || '').trim().toLowerCase() || undefined
+        name: name.toLowerCase(),
+        displayName: name || undefined,
+        bundleId: bundleId.toLowerCase() || undefined,
+        path: appPath ? appPath.replace(/\/$/, '') : undefined
       }
     }
   })
@@ -1062,6 +1068,76 @@ function markClipboardWrittenByApp(text: string) {
   lastRawImageSignature = readRawImageSignature()
 }
 
+// v2: aspect-preserving (v1 squashed everything into 120×120) and large enough
+// to stay crisp on Retina at the "large" card size.
+const THUMBNAIL_VERSION = 2
+const THUMBNAIL_MAX_EDGE = 280
+
+function makeThumbnail(image: Electron.NativeImage): string {
+  const { width, height } = image.getSize()
+  const scaled = width >= height
+    ? image.resize({ width: Math.min(THUMBNAIL_MAX_EDGE, width), quality: 'good' })
+    : image.resize({ height: Math.min(THUMBNAIL_MAX_EDGE, height), quality: 'good' })
+  return `data:image/jpeg;base64,${scaled.toJPEG(72).toString('base64')}`
+}
+
+// Regenerate v1 thumbnails from the full image on disk, a few at a time after
+// startup so launch is never blocked. Items without a local file are skipped.
+function upgradeLegacyThumbnails() {
+  const pending = historyCache
+    .filter(item => item.type === 'image' && (item.metadata.thumbnailVersion ?? 1) < THUMBNAIL_VERSION && item.metadata.imagePath)
+    .map(item => item.id)
+  if (pending.length === 0) return
+
+  const step = () => {
+    const batch = pending.splice(0, 4)
+    if (batch.length === 0) return
+    const updates = new Map<string, ClipboardItem>()
+    for (const id of batch) {
+      const item = historyCache.find(entry => entry.id === id)
+      const imagePath = item?.metadata.imagePath
+      if (!item || !imagePath || !isPathWithinDirectory(imagePath, getImagesDir()) || !existsSync(imagePath)) continue
+      const img = nativeImage.createFromPath(imagePath)
+      if (img.isEmpty()) continue
+      const { width, height } = img.getSize()
+      updates.set(id, {
+        ...item,
+        thumbnail: makeThumbnail(img),
+        metadata: { ...item.metadata, imageWidth: width, imageHeight: height, thumbnailVersion: THUMBNAIL_VERSION }
+      })
+    }
+    if (updates.size > 0) applyHistoryUpdate(historyCache.map(entry => updates.get(entry.id) || entry))
+    setTimeout(step, 50)
+  }
+  setTimeout(step, 1500)
+}
+
+function sourceMetadata(source: ApplicationIdentity): Pick<ClipboardItemMetadata, 'sourceApp' | 'sourceAppBundleId' | 'sourceAppPath'> {
+  return {
+    sourceApp: source.displayName || source.name || undefined,
+    sourceAppBundleId: source.bundleId,
+    sourceAppPath: source.path
+  }
+}
+
+// App icons are read from the local bundle (no network) and cached per path.
+const appIconCache = new Map<string, string | null>()
+function getAppIconDataUrl(rawPath: unknown): Promise<string | null> {
+  if (typeof rawPath !== 'string' || !rawPath.startsWith('/') || !/\.app$/i.test(rawPath) || rawPath.includes('/../') || rawPath.length > 1024) {
+    return Promise.resolve(null)
+  }
+  if (appIconCache.has(rawPath)) return Promise.resolve(appIconCache.get(rawPath) ?? null)
+  if (!existsSync(rawPath)) return Promise.resolve(null)
+  return app.getFileIcon(rawPath, { size: 'normal' })
+    .then(icon => (icon.isEmpty() ? null : icon.toDataURL()))
+    .catch(() => null)
+    .then(dataUrl => {
+      if (appIconCache.size > 300) appIconCache.clear()
+      appIconCache.set(rawPath, dataUrl)
+      return dataUrl
+    })
+}
+
 function getImageBitmapKey(image: Electron.NativeImage): string {
   const size = image.getSize()
   return getBitmapFingerprint(size.width, size.height, image.toBitmap())
@@ -1102,7 +1178,7 @@ function pollClipboard() {
       // text. Record it as seen so one copy yields one item, not text + image.
       lastRawImageSignature = readRawImageSignature()
       const type = detectContentType(text)
-      const sourceApp = getFrontmostApp()
+      const source = getFrontmostApplicationIdentity()
 
       const MAX_SEARCH_TEXT = 5000
       const searchText = text.length > MAX_SEARCH_TEXT
@@ -1116,7 +1192,7 @@ function pollClipboard() {
         metadata: {
           url: type === 'link' ? text : undefined,
           colorHex: type === 'color' ? text : undefined,
-          sourceApp: sourceApp || undefined,
+          ...sourceMetadata(source),
           favicon: type === 'link' && settings.loadFavicons ? getFaviconUrl(text) : undefined
         },
         createdAt: Date.now(),
@@ -1165,12 +1241,10 @@ function pollClipboard() {
           return
         }
 
-        const sourceApp = getFrontmostApp()
+        const source = getFrontmostApplicationIdentity()
         const id = uuidv4()
-
-        const thumbImg = image.resize({ width: 120, height: 120 })
-        const thumbnail = thumbImg.toJPEG(70).toString('base64')
-        const thumbnailDataUrl = `data:image/jpeg;base64,${thumbnail}`
+        const size = image.getSize()
+        const thumbnailDataUrl = makeThumbnail(image)
 
         let persisted: ReturnType<typeof persistImageToDisk>
         try {
@@ -1186,10 +1260,13 @@ function pollClipboard() {
           content: persisted.fileUrl,
           thumbnail: thumbnailDataUrl,
           metadata: {
-            sourceApp: sourceApp || undefined,
+            ...sourceMetadata(source),
             imagePath: persisted.imagePath,
             imageMime: persisted.mime,
-            imageKey: bitmapKey
+            imageKey: bitmapKey,
+            imageWidth: size.width,
+            imageHeight: size.height,
+            thumbnailVersion: THUMBNAIL_VERSION
           },
           createdAt: Date.now(),
           searchText: 'image screenshot',
@@ -1343,6 +1420,7 @@ app.whenReady().then(() => {
   // Migration: older versions stored full image data URLs in electron-store.
   // Convert them to on-disk files to reduce storage and memory usage.
   migrateHistoryImagesToDisk()
+  upgradeLegacyThumbnails()
 
   // Apply initial dock visibility. The app is an LSUIElement (menu-bar agent) so
   // it starts WITHOUT a Dock icon by default; explicitly show it when the user
@@ -1397,6 +1475,8 @@ app.whenReady().then(() => {
       return { success: false }
     }
   })
+
+  ipcMain.handle('get-app-icon', (_evt, appPath: unknown) => getAppIconDataUrl(appPath))
 
   ipcMain.handle('get-image-drag-path', async (_evt, itemId: unknown) => {
     try {

@@ -22,6 +22,17 @@ export type IconName =
   | 'close'
   | 'settings'
   | 'power'
+  | 'code'
+  | 'braces'
+  | 'mail'
+  | 'phone'
+  | 'pause'
+  | 'play'
+  | 'stack'
+  | 'chevron'
+  | 'plus'
+  | 'pencil'
+  | 'eye'
 
 interface IconProps {
   name: IconName
@@ -152,6 +163,80 @@ export function Icon({ name, className = 'w-4 h-4', filled = false, strokeWidth 
         <svg {...common}>
           <path d="M12 3.5v8" />
           <path d="M7.4 6.6a7 7 0 1 0 9.2 0" />
+        </svg>
+      )
+    case 'code':
+      return (
+        <svg {...common}>
+          <path d="M8.5 7.5L4 12l4.5 4.5" />
+          <path d="M15.5 7.5L20 12l-4.5 4.5" />
+          <path d="M13.2 5.5l-2.4 13" />
+        </svg>
+      )
+    case 'braces':
+      return (
+        <svg {...common}>
+          <path d="M9 4.5H8a2 2 0 0 0-2 2v3a2.5 2.5 0 0 1-2 2.5 2.5 2.5 0 0 1 2 2.5v3a2 2 0 0 0 2 2h1" />
+          <path d="M15 4.5h1a2 2 0 0 1 2 2v3a2.5 2.5 0 0 0 2 2.5 2.5 2.5 0 0 0-2 2.5v3a2 2 0 0 1-2 2h-1" />
+        </svg>
+      )
+    case 'mail':
+      return (
+        <svg {...common}>
+          <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
+          <path d="M4.5 7.5l7.5 5.5 7.5-5.5" />
+        </svg>
+      )
+    case 'phone':
+      return (
+        <svg {...common}>
+          <path d="M6.6 3.8h2.6l1.4 4-2 1.4a11.5 11.5 0 0 0 6.2 6.2l1.4-2 4 1.4v2.6a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 6a2 2 0 0 1 2-2.2z" />
+        </svg>
+      )
+    case 'pause':
+      return (
+        <svg {...common}>
+          <rect x="7" y="5.5" width="3" height="13" rx="1" />
+          <rect x="14" y="5.5" width="3" height="13" rx="1" />
+        </svg>
+      )
+    case 'play':
+      return (
+        <svg {...common}>
+          <path d="M8 5.8v12.4a.8.8 0 0 0 1.2.7l9.6-6.2a.8.8 0 0 0 0-1.4L9.2 5.1A.8.8 0 0 0 8 5.8z" />
+        </svg>
+      )
+    case 'stack':
+      return (
+        <svg {...common}>
+          <path d="M12 4l8 4-8 4-8-4 8-4z" />
+          <path d="M4 12l8 4 8-4" />
+          <path d="M4 16l8 4 8-4" />
+        </svg>
+      )
+    case 'chevron':
+      return (
+        <svg {...common}>
+          <path d="M7 10l5 5 5-5" />
+        </svg>
+      )
+    case 'plus':
+      return (
+        <svg {...common}>
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      )
+    case 'pencil':
+      return (
+        <svg {...common}>
+          <path d="M15.5 5.5l3 3L9 18H6v-3l9.5-9.5z" />
+        </svg>
+      )
+    case 'eye':
+      return (
+        <svg {...common}>
+          <path d="M2.8 12s3.4-6 9.2-6 9.2 6 9.2 6-3.4 6-9.2 6-9.2-6-9.2-6z" />
+          <circle cx="12" cy="12" r="2.6" />
         </svg>
       )
   }
