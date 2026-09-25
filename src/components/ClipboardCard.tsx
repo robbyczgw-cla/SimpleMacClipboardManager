@@ -2,7 +2,7 @@ import { memo, useMemo, type ReactNode } from 'react'
 import { ClipboardItem, CardSize } from '../types'
 import type { Translations } from '../i18n/translations'
 import { CARD_DIMENSIONS, VERTICAL_CARD_TRIM } from '../cardSizes'
-import { compactPreview, detectTextKind, matchRanges, snippetStart, type HighlightRange, type TextKind } from '../../common/content'
+import { compactPreview, detectTextKind, formatJson, matchRanges, snippetStart, type HighlightRange, type TextKind } from '../../common/content'
 import { useAppIcon } from '../hooks/useAppIcon'
 import { Icon, TypeIcon, type IconName } from './icons'
 
@@ -158,9 +158,14 @@ function ClipboardCard({
   )
   const monospace = kind === 'code' || kind === 'json'
 
+  // Minified JSON is one endless line; show it indented like an editor would.
+  const displayContent = useMemo(
+    () => (kind === 'json' && item.content.length <= DETECT_LIMIT ? formatJson(item.content) ?? item.content : item.content),
+    [kind, item.content]
+  )
   const preview = useMemo(
-    () => (item.type === 'text' || item.type === 'link' ? buildPreview(item.content, searchQuery, monospace, dims.previewChars) : null),
-    [item.type, item.content, searchQuery, monospace, dims.previewChars]
+    () => (item.type === 'text' || item.type === 'link' ? buildPreview(displayContent, searchQuery, monospace, dims.previewChars) : null),
+    [item.type, displayContent, searchQuery, monospace, dims.previewChars]
   )
 
   const handleContextMenu = (e: React.MouseEvent) => {

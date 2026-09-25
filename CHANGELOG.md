@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Source-app icons on every card, read locally from the app bundle (no network)
+- Search hits are highlighted; long clips jump to the first hit
+- Smart text detection: code and JSON render in monospace (JSON indented), emails and phone numbers get their own actions
+- Preview: copy JSON formatted or minified, write an email, copy phone digits, character/word/line count
+- Tab / Shift-Tab switch between Recent, Saved and each collection; ⌘S saves the selected clip
+- Hold ⌘ to reveal ⌘1–⌘9 quick-paste badges
+- Image dimensions on image cards
+
+### Changed
+- Refined glass design: segmented view switcher, grouped type filter, custom menus instead of native dropdowns
+- Panel height follows the card size, so cards are no longer clipped by the footer
+- A short fade-in plays on every open, not only the first one
+- Esc clears the search before closing the panel; Space previews while the search is empty
+- Sharper, undistorted image thumbnails (existing ones are regenerated in the background)
+
+### Fixed
+- Creating and renaming collections did nothing (Electron does not support `window.prompt`)
+- ⌘⇧S (add to collection) never triggered
+- Source-app names were shown in lower case
+- The footer said “Paste” when Enter only copied
+
+### Performance
+- An image sitting on the clipboard no longer gets decoded on every poll (~45 ms → ~0.1 ms per poll for screenshots)
+- Opening the panel no longer re-fetches the full history when nothing changed
+- Search ranking runs as a deferred render, so typing stays responsive; cards only re-render when their own state changes
+
 ## [0.14.0] - 2026-08-06
 
 ### Fixed

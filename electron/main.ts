@@ -1128,7 +1128,12 @@ function getAppIconDataUrl(rawPath: unknown): Promise<string | null> {
   }
   if (appIconCache.has(rawPath)) return Promise.resolve(appIconCache.get(rawPath) ?? null)
   if (!existsSync(rawPath)) return Promise.resolve(null)
-  return app.getFileIcon(rawPath, { size: 'normal' })
+  // QuickLook first: getFileIcon returns a blank placeholder for apps whose
+  // icon only lives in an Assets.car (Mail, Notes, Chrome on current macOS).
+  // Note: getFileIcon size 'large' is unsupported on macOS and aborts the process.
+  return nativeImage.createThumbnailFromPath(rawPath, { width: 64, height: 64 })
+    .then(icon => (icon.isEmpty() ? Promise.reject(new Error('empty')) : icon))
+    .catch(() => app.getFileIcon(rawPath, { size: 'normal' }))
     .then(icon => (icon.isEmpty() ? null : icon.toDataURL()))
     .catch(() => null)
     .then(dataUrl => {

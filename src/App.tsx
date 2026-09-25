@@ -77,6 +77,8 @@ function App() {
       setSearchQuery('')
       setSelectedIds(prev => (prev.size === 0 ? prev : new Set()))
       setPreviewItem(null)
+      if (quickKeyTimer.current) clearTimeout(quickKeyTimer.current)
+      quickKeyTimer.current = null
       setShowQuickKeys(false)
     })
     const unsubCollections = window.electronAPI.onCollectionsUpdated(setCollections)

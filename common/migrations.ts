@@ -33,8 +33,17 @@ function normalizeMetadata(value: unknown): ClipboardItemMetadata {
     title: typeof value.title === 'string' ? value.title : undefined,
     imagePath: typeof value.imagePath === 'string' ? value.imagePath : undefined,
     imageMime: typeof value.imageMime === 'string' ? value.imageMime : undefined,
-    imageKey: typeof value.imageKey === 'string' ? value.imageKey : undefined
+    imageKey: typeof value.imageKey === 'string' ? value.imageKey : undefined,
+    imageWidth: positiveInt(value.imageWidth),
+    imageHeight: positiveInt(value.imageHeight),
+    thumbnailVersion: positiveInt(value.thumbnailVersion),
+    sourceAppBundleId: typeof value.sourceAppBundleId === 'string' ? value.sourceAppBundleId.slice(0, 200) : undefined,
+    sourceAppPath: typeof value.sourceAppPath === 'string' && /^\/.{1,1000}\.app$/i.test(value.sourceAppPath) ? value.sourceAppPath : undefined
   }
+}
+
+function positiveInt(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined
 }
 
 function normalizeItem(value: unknown, now: number): ClipboardItem | null {
